@@ -1,0 +1,35 @@
+# Environment files — NEVER commit real secrets
+.env
+.env.local
+.env.*.local
+backend/.env
+frontend/.env
+
+# Keep examples
+!.env.example
+
+# Dependencies
+node_modules/
+frontend/node_modules/
+backend/node_modules/
+
+frontend/dist
+
+# Vite temp files
+frontend/vite.config.js.timestamp-*.mjs
+*.timestamp-*.mjs
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Uploads (user content)
+backend/uploads/
+backend/superAdmin.md
+
+/superAdmin.txt

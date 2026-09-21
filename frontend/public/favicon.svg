@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="AXI Collection">
+  <rect width="32" height="32" fill="#0A0A0A"/>
+  <path d="M8 25 L16 7 L24 25" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linejoin="miter"/>
+  <path d="M11.6 19 H20.4" stroke="#FFFFFF" stroke-width="2.5"/>
+</svg>

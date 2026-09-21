@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" width="400" height="500" role="img" aria-label="AXI Collection — product image coming soon">
+  <rect width="400" height="500" fill="#F5F5F5"/>
+  <g stroke="#D4D4D4" stroke-width="2" fill="none">
+    <rect x="145" y="195" width="110" height="88"/>
+    <circle cx="172" cy="221" r="9"/>
+    <path d="M145 265 L182 234 L210 258 L229 244 L255 265"/>
+  </g>
+  <text x="200" y="330" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="17" letter-spacing="4.5" fill="#A3A3A3">AXI COLLECTION</text>
+  <text x="200" y="356" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="10" letter-spacing="2.2" fill="#C4C4C4">IMAGE COMING SOON</text>
+</svg>
