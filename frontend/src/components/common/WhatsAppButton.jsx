@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 
-const DEFAULT_NUMBER = '03100051982';
+const DEFAULT_NUMBER = '03087522160';
 
 export default function WhatsAppButton() {
   const [phone, setPhone] = useState(DEFAULT_NUMBER);
