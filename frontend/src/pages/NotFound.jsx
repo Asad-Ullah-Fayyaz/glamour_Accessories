@@ -29,17 +29,18 @@ export default function NotFound() {
           font-size: 0.75rem;
           text-transform: uppercase;
           letter-spacing: 0.2em;
-          color: var(--accent-gold);
+          color: #000000;
+          font-weight: 700;
         }
         .notfound-title {
           font-family: var(--font-serif);
           font-size: 2.5rem;
           margin-top: 0.5rem;
-          color: var(--text-primary);
+          color: #000000;
           line-height: 1.2;
         }
         .notfound-text {
-          color: var(--text-secondary);
+          color: #444444;
           margin-top: 1rem;
           font-size: 0.95rem;
           line-height: 1.7;

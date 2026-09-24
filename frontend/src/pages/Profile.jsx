@@ -66,28 +66,28 @@ export default function Profile() {
 
   return (
     <div className="container profile-page" style={{ padding: '3.5rem 1.5rem' }}>
-      <div className="profile-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-light)', paddingBottom: '1.5rem', marginBottom: '3rem', flexWrap: 'wrap', gap: '1rem' }}>
+      <div className="profile-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #000000', paddingBottom: '1.5rem', marginBottom: '3rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div style={{ minWidth: 0 }}>
-          <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--text-muted)' }}>CLIENT ACCOUNT</span>
-          <h1 className="profile-title" style={{ fontFamily: 'var(--font-serif)', fontSize: '2.2rem', marginTop: '2px' }}>
+          <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.15em', color: '#767676' }}>CLIENT ACCOUNT</span>
+          <h1 className="profile-title" style={{ fontFamily: 'var(--font-serif)', fontSize: '2.2rem', marginTop: '2px', color: '#000000' }}>
             Welcome, {user.name}
           </h1>
         </div>
 
-        <button onClick={() => { logout(); navigate('/login'); }} className="btn btn-secondary btn-sm profile-signout" style={{ color: 'red', borderColor: '#ffcccc' }}>
+        <button onClick={() => { logout(); navigate('/login'); }} className="btn btn-secondary btn-sm profile-signout" style={{ color: '#000000', borderColor: '#000000' }}>
           <LogOut size={14} /> Sign Out
         </button>
       </div>
 
       <div className="profile-layout" style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: '3rem', alignItems: 'start' }}>
         {/* Left Address & Profile Settings */}
-        <aside className="profile-aside" style={{ backgroundColor: 'var(--bg-secondary)', padding: '1.75rem', border: '1px solid var(--border-light)', minWidth: 0 }}>
-          <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.2rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <aside className="profile-aside" style={{ backgroundColor: '#F5F5F5', padding: '1.75rem', border: '1px solid #E0E0E0', borderTop: '3px solid #000000', minWidth: 0 }}>
+          <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.2rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '8px', color: '#000000' }}>
             <MapPin size={18} /> Delivery Address
           </h3>
 
           {addressMsg && (
-            <div style={{ fontSize: '0.8rem', color: '#137333', marginBottom: '1rem', fontWeight: 600 }}>
+            <div style={{ fontSize: '0.8rem', color: '#000000', marginBottom: '1rem', fontWeight: 600, padding: '0.5rem 0.75rem', backgroundColor: '#FFFFFF', border: '1px solid #000000', borderLeft: '3px solid #000000', borderRadius: 'var(--radius-sm)' }}>
               {addressMsg}
             </div>
           )}
@@ -141,7 +141,7 @@ export default function Profile() {
 
         {/* Right Order History Table */}
         <main className="profile-main" style={{ minWidth: 0 }}>
-          <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.4rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.4rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '8px', color: '#000000' }}>
             <Package size={20} /> Purchase & Order History
           </h3>
 
@@ -150,8 +150,8 @@ export default function Profile() {
               <div className="spinner"></div>
             </div>
           ) : orders.length === 0 ? (
-            <div className="profile-empty" style={{ padding: '3rem 1.5rem', backgroundColor: 'var(--bg-secondary)', textAlignment: 'center', textAlign: 'center' }}>
-              <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>You have not placed any orders yet.</p>
+            <div className="profile-empty" style={{ padding: '3rem 1.5rem', backgroundColor: '#F5F5F5', border: '1px solid #E0E0E0', textAlign: 'center' }}>
+              <p style={{ color: '#767676', marginBottom: '1rem' }}>You have not placed any orders yet.</p>
               <Link to="/products" className="btn btn-primary btn-sm">Start Browsing Catalog</Link>
             </div>
           ) : (
@@ -175,12 +175,12 @@ export default function Profile() {
                       <td data-label="Items" style={{ fontSize: '0.85rem' }}>{ord.items.length} item(s)</td>
                       <td data-label="Total" style={{ fontWeight: 700 }}>PKR {ord.totalAmount.toLocaleString()}</td>
                       <td data-label="Status">
-                        <span className={`badge ${ord.status === 'Delivered' ? 'badge-success' : (ord.status === 'Shipped' ? 'badge-info' : 'badge-warning')}`}>
+                        <span className="badge badge-dark">
                           {ord.status}
                         </span>
                       </td>
                       <td data-label="Tracking">
-                        <Link to={`/track-order?orderId=${ord.orderId}`} style={{ fontSize: '0.8rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <Link to={`/track-order?orderId=${ord.orderId}`} style={{ fontSize: '0.8rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#000000' }}>
                           <Truck size={14} /> Track
                         </Link>
                       </td>
@@ -247,10 +247,10 @@ export default function Profile() {
             width: 100%;
           }
           .profile-orders-table tr {
-            border: 1px solid var(--border-light);
+            border: 1px solid #000000;
             margin-bottom: 1rem;
             padding: 1rem;
-            background-color: var(--bg-secondary);
+            background-color: #FFFFFF;
           }
           .profile-orders-table td {
             border: none;
@@ -263,7 +263,7 @@ export default function Profile() {
             font-size: 0.7rem;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            color: var(--text-muted);
+            color: #767676;
             margin-right: 0.5rem;
             min-width: 70px;
           }

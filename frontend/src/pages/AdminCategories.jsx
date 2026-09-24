@@ -1,35 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import AdminSidebar from '../components/admin/AdminSidebar';
-import { Plus, Trash2, Package } from 'lucide-react';
+import { ChevronDown, ChevronRight, Package, Plus, Trash2 } from 'lucide-react';
 import api from '../services/api';
 
 export default function AdminCategories() {
-  const [categories, setCategories] = useState([]);
+  const [tree, setTree] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
   const [notification, setNotification] = useState('');
-  const [busyId, setBusyId] = useState(null); // tracks which category is being toggled/deleted
+  const [busyId, setBusyId] = useState(null);
+  const [collapsed, setCollapsed] = useState({});
+  const [l1Name, setL1Name] = useState('');
+  const [l1Description, setL1Description] = useState('');
+  const [l2Name, setL2Name] = useState('');
+  const [l2Parent, setL2Parent] = useState('');
+  const [l3Name, setL3Name] = useState('');
+  const [l3ParentL1, setL3ParentL1] = useState('');
+  const [l3ParentL2, setL3ParentL2] = useState('');
 
-  // New Category Form
-  const [newCatName, setNewCatName] = useState('');
-  const [newCatDesc, setNewCatDesc] = useState('');
-
-  // New SubCategory Form
-  const [selectedParentId, setSelectedParentId] = useState('');
-  const [newSubName, setNewSubName] = useState('');
-
-  // ---- Load categories from the admin endpoint ----
   const fetchCategories = async () => {
     setLoading(true);
     setErrorMsg('');
     try {
       const res = await api.get('/admin/categories');
-      if (res.success) {
-        setCategories(res.categories);
-        if (res.categories.length > 0 && !selectedParentId) {
-          setSelectedParentId(res.categories[0]._id);
-        }
-      }
+      if (res.success) setTree(res.categories || []);
     } catch (err) {
       setErrorMsg(err.message || 'Failed to load categories');
     } finally {
@@ -39,60 +33,46 @@ export default function AdminCategories() {
 
   useEffect(() => {
     fetchCategories();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ---- Create Category ----
-  const handleCreateCategory = async (e) => {
-    e.preventDefault();
-    if (!newCatName.trim()) return;
+  const notify = (message) => {
+    setNotification(message);
+    window.setTimeout(() => setNotification(''), 2500);
+  };
+
+  const childrenOf = (parentId) => {
+    if (!parentId) return [];
+    const walk = (nodes) => {
+      for (const node of nodes) {
+        if (node._id === parentId) return node.children || [];
+        const result = walk(node.children || []);
+        if (result) return result;
+      }
+      return null;
+    };
+    return walk(tree) || [];
+  };
+
+  const createCategory = async (event, payload, successMessage, reset) => {
+    event.preventDefault();
     setErrorMsg('');
     try {
-      await api.post('/categories', {
-        name: newCatName.trim(),
-        description: newCatDesc.trim()
-      });
-      setNewCatName('');
-      setNewCatDesc('');
-      setNotification('Category created');
-      setTimeout(() => setNotification(''), 2500);
-      fetchCategories();
+      await api.post('/categories', payload);
+      reset();
+      notify(successMessage);
+      await fetchCategories();
     } catch (err) {
       setErrorMsg(err.message || 'Failed to create category');
     }
   };
 
-  // ---- Create SubCategory ----
-  const handleCreateSubCategory = async (e) => {
-    e.preventDefault();
-    if (!newSubName.trim() || !selectedParentId) return;
+  const handleToggle = async (category) => {
+    setBusyId(category._id);
     setErrorMsg('');
     try {
-      await api.post('/categories/subcategory', {
-        name: newSubName.trim(),
-        categoryId: selectedParentId
-      });
-      setNewSubName('');
-      setNotification('Subcategory created');
-      setTimeout(() => setNotification(''), 2500);
-      fetchCategories();
-    } catch (err) {
-      setErrorMsg(err.message || 'Failed to create subcategory');
-    }
-  };
-
-  // ---- Toggle Category Active ----
-  const handleToggleCategory = async (id, name, currentActive) => {
-    setErrorMsg('');
-    setNotification('');
-    setBusyId(id);
-    try {
-      const res = await api.put(`/admin/categories/${id}/toggle`);
+      const res = await api.put(`/admin/categories/${category._id}/toggle`);
       if (res.success) {
-        setNotification(
-          `"${name}" ${currentActive ? 'disabled' : 'enabled'}`
-        );
-        setTimeout(() => setNotification(''), 2500);
+        notify(`"${category.name}" ${category.isActive ? 'disabled' : 'enabled'}`);
         await fetchCategories();
       }
     } catch (err) {
@@ -102,352 +82,96 @@ export default function AdminCategories() {
     }
   };
 
-  // ---- Delete Category ----
-  const handleDeleteCategory = async (id, name, productCount) => {
-    if (productCount > 0) {
-      setErrorMsg(
-        `Cannot delete "${name}": ${productCount} product${productCount === 1 ? ' is' : 's are'} assigned to it. Move or delete those products first.`
-      );
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
-
-    if (
-      !window.confirm(
-        `Delete category "${name}" and all its subcategories?\n\nThis cannot be undone.`
-      )
-    ) {
-      return;
-    }
-
+  const handleDelete = async (category) => {
+    if (!window.confirm(`Delete "${category.name}" and all descendants?`)) return;
+    setBusyId(category._id);
     setErrorMsg('');
-    setNotification('');
-    setBusyId(id);
     try {
-      const res = await api.delete(`/admin/categories/${id}`);
+      const res = await api.delete(`/admin/categories/${category._id}`);
       if (res.success) {
-        setNotification(res.message || `"${name}" deleted`);
-        setTimeout(() => setNotification(''), 3000);
+        notify(res.message || `"${category.name}" deleted`);
         await fetchCategories();
       }
     } catch (err) {
       setErrorMsg(err.message || 'Delete failed');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setBusyId(null);
     }
   };
 
+  const renderRow = (category, indent = 0) => (
+    <React.Fragment key={category._id}>
+      <tr style={{ borderBottom: '1px solid var(--border-light)', backgroundColor: category.level === 1 ? '#f8f9fa' : '#fff' }}>
+        <td style={{ padding: '0.75rem 1rem', paddingLeft: `${1 + indent * 2}rem`, fontWeight: category.level === 1 ? 800 : 600 }}>
+          {category.level < 3 && (category.children || []).length > 0 && (
+            <button type="button" onClick={() => setCollapsed((prev) => ({ ...prev, [category._id]: !prev[category._id] }))} style={{ background: 'none', border: 0, cursor: 'pointer', marginRight: '0.35rem' }}>
+              {collapsed[category._id] ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+            </button>
+          )}
+          {category.name}
+        </td>
+        <td style={{ padding: '0.75rem 1rem' }}><span className="badge badge-dark">L{category.level}</span></td>
+        <td style={{ padding: '0.75rem 1rem', color: 'var(--text-muted)' }}><Package size={12} /> {category.productCount || 0}</td>
+        <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
+          <button type="button" onClick={() => handleToggle(category)} disabled={busyId === category._id} className={`badge ${category.isActive ? 'badge-success' : 'badge-danger'}`} style={{ border: 0, cursor: 'pointer', marginRight: '0.5rem' }}>
+            {category.isActive ? 'Active' : 'Disabled'}
+          </button>
+          <button type="button" onClick={() => handleDelete(category)} disabled={busyId === category._id} title="Delete category" style={{ background: 'transparent', border: 0, color: '#c53030', cursor: 'pointer' }}>
+            <Trash2 size={14} />
+          </button>
+        </td>
+      </tr>
+      {!collapsed[category._id] && (category.children || []).map((child) => renderRow(child, indent + 1))}
+    </React.Fragment>
+  );
+
+  const l3Options = childrenOf(l3ParentL1);
+
   return (
     <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--bg-secondary)' }}>
       <AdminSidebar />
-
-      <main style={{ flex: 1, padding: '2.5rem' }}>
-        {/* Header */}
-        <div
-          style={{
-            borderBottom: '1px solid var(--border-light)',
-            paddingBottom: '1.5rem',
-            marginBottom: '2.5rem'
-          }}
-        >
-          <span
-            style={{
-              fontSize: '0.75rem',
-              textTransform: 'uppercase',
-              letterSpacing: '0.15em',
-              color: 'var(--text-muted)'
-            }}
-          >
-            ADMINISTRATION
-          </span>
-          <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '2.2rem', marginTop: '2px' }}>
-            Category Hierarchy (2-Level)
-          </h1>
+      <main style={{ flex: 1, padding: '2rem', maxWidth: '1600px', margin: '0 auto' }}>
+        <div style={{ marginBottom: '2rem' }}>
+          <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--text-muted)', fontWeight: 600 }}>ADMINISTRATION</span>
+          <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '2.2rem', margin: '0.25rem 0 0.5rem' }}>Category Hierarchy</h1>
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Level 1 to Level 2 to Level 3. Products require L1 and L2; L3 is optional.</p>
         </div>
+        {notification && <div style={{ backgroundColor: '#e6f4ea', border: '1px solid #b7e4c7', color: '#137333', padding: '0.85rem 1.25rem', marginBottom: '1.5rem' }}>{notification}</div>}
+        {errorMsg && <div style={{ backgroundColor: '#fff5f5', border: '1px solid #feb2b2', color: '#c53030', padding: '0.85rem 1.25rem', marginBottom: '1.5rem' }}>{errorMsg}</div>}
 
-        {/* Banners */}
-        {notification && (
-          <div
-            style={{
-              backgroundColor: '#e6f4ea',
-              border: '1px solid #b7e4c7',
-              color: '#137333',
-              padding: '0.85rem 1.25rem',
-              borderRadius: 'var(--radius-sm)',
-              marginBottom: '1.5rem',
-              fontWeight: 600,
-              fontSize: '0.85rem'
-            }}
-          >
-            {notification}
-          </div>
-        )}
-
-        {errorMsg && (
-          <div
-            style={{
-              backgroundColor: '#fff5f5',
-              border: '1px solid #feb2b2',
-              color: '#c53030',
-              padding: '0.85rem 1.25rem',
-              borderRadius: 'var(--radius-sm)',
-              marginBottom: '1.5rem',
-              fontSize: '0.85rem'
-            }}
-          >
-            {errorMsg}
-          </div>
-        )}
-
-        {/* Two-column forms */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2.5rem' }}>
-          {/* Create Top Category */}
-          <div
-            style={{
-              backgroundColor: '#fff',
-              padding: '1.75rem',
-              border: '1px solid var(--border-light)',
-              boxShadow: 'var(--shadow-subtle)'
-            }}
-          >
-            <h3
-              style={{
-                fontFamily: 'var(--font-serif)',
-                fontSize: '1.25rem',
-                marginBottom: '1.25rem'
-              }}
-            >
-              Add Top Category
-            </h3>
-            <form onSubmit={handleCreateCategory}>
-              <div className="form-group">
-                <label className="form-label">Category Name *</label>
-                <input
-                  type="text"
-                  value={newCatName}
-                  onChange={(e) => setNewCatName(e.target.value)}
-                  required
-                  className="form-input"
-                  placeholder="e.g. Smart Accessories"
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Description</label>
-                <input
-                  type="text"
-                  value={newCatDesc}
-                  onChange={(e) => setNewCatDesc(e.target.value)}
-                  className="form-input"
-                  placeholder="Brief description"
-                />
-              </div>
-              <button type="submit" className="btn btn-primary btn-sm btn-full">
-                <Plus size={14} /> Create Category
-              </button>
-            </form>
-          </div>
-
-          {/* Create Subcategory */}
-          <div
-            style={{
-              backgroundColor: '#fff',
-              padding: '1.75rem',
-              border: '1px solid var(--border-light)',
-              boxShadow: 'var(--shadow-subtle)'
-            }}
-          >
-            <h3
-              style={{
-                fontFamily: 'var(--font-serif)',
-                fontSize: '1.25rem',
-                marginBottom: '1.25rem'
-              }}
-            >
-              Add 2nd Level Sub-Category
-            </h3>
-            <form onSubmit={handleCreateSubCategory}>
-              <div className="form-group">
-                <label className="form-label">Select Parent Category *</label>
-                <select
-                  value={selectedParentId}
-                  onChange={(e) => setSelectedParentId(e.target.value)}
-                  className="form-select"
-                >
-                  {categories.map((c) => (
-                    <option key={c._id} value={c._id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Sub-Category Name *</label>
-                <input
-                  type="text"
-                  value={newSubName}
-                  onChange={(e) => setNewSubName(e.target.value)}
-                  required
-                  className="form-input"
-                  placeholder="e.g. Leather Straps"
-                />
-              </div>
-              <button type="submit" className="btn btn-primary btn-sm btn-full">
-                <Plus size={14} /> Create Sub-Category
-              </button>
-            </form>
-          </div>
-        </div>
-
-        {/* Existing Categories Table */}
-        <div
-          style={{
-            backgroundColor: '#fff',
-            padding: '1.75rem',
-            border: '1px solid var(--border-light)',
-            marginTop: '2.5rem',
-            boxShadow: 'var(--shadow-subtle)'
-          }}
-        >
-          <h3
-            style={{
-              fontFamily: 'var(--font-serif)',
-              fontSize: '1.3rem',
-              marginBottom: '1.5rem'
-            }}
-          >
-            Current Store Categories
-          </h3>
-
-          {loading ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}>
-              <div className="spinner"></div>
+        {loading ? <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}><div className="spinner" /></div> : (
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
+              <Form title="Main Categories (L1)" onSubmit={(event) => createCategory(event, { name: l1Name.trim(), description: l1Description.trim() }, 'Level 1 category created', () => { setL1Name(''); setL1Description(''); })}>
+                <input className="form-input" required placeholder="Name" value={l1Name} onChange={(event) => setL1Name(event.target.value)} />
+                <input className="form-input" placeholder="Description (optional)" value={l1Description} onChange={(event) => setL1Description(event.target.value)} />
+                <button className="btn btn-primary" type="submit"><Plus size={14} /> Create L1</button>
+              </Form>
+              <Form title="Subcategories (L2)" onSubmit={(event) => createCategory(event, { name: l2Name.trim(), parent: l2Parent }, 'Level 2 category created', () => { setL2Name(''); })}>
+                <select className="form-select" required value={l2Parent} onChange={(event) => setL2Parent(event.target.value)}><option value="">Choose L1 parent...</option>{tree.map((category) => <option key={category._id} value={category._id}>{category.name}</option>)}</select>
+                <input className="form-input" required placeholder="Name" value={l2Name} onChange={(event) => setL2Name(event.target.value)} />
+                <button className="btn btn-primary" type="submit"><Plus size={14} /> Create L2</button>
+              </Form>
+              <Form title="Sub-Sub-Categories (L3)" onSubmit={(event) => createCategory(event, { name: l3Name.trim(), parent: l3ParentL2 }, 'Level 3 category created', () => { setL3Name(''); })}>
+                <select className="form-select" required value={l3ParentL1} onChange={(event) => { setL3ParentL1(event.target.value); setL3ParentL2(''); }}><option value="">Choose L1 parent...</option>{tree.map((category) => <option key={category._id} value={category._id}>{category.name}</option>)}</select>
+                <select className="form-select" required disabled={!l3ParentL1} value={l3ParentL2} onChange={(event) => setL3ParentL2(event.target.value)}><option value="">Choose L2 parent...</option>{l3Options.map((category) => <option key={category._id} value={category._id}>{category.name}</option>)}</select>
+                <input className="form-input" required placeholder="Name" value={l3Name} onChange={(event) => setL3Name(event.target.value)} />
+                <button className="btn btn-primary" type="submit"><Plus size={14} /> Create L3</button>
+              </Form>
             </div>
-          ) : categories.length === 0 ? (
-            <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-              No categories yet. Create one above.
-            </div>
-          ) : (
-            <div className="table-responsive">
-              <table className="custom-table">
-                <thead>
-                  <tr>
-                    <th>Category</th>
-                    <th>Slug</th>
-                    <th>Sub-Categories</th>
-                    <th>Products</th>
-                    <th>Status</th>
-                    <th style={{ textAlign: 'right' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {categories.map((cat) => {
-                    const isBusy = busyId === cat._id;
-                    const productCount = cat.productCount || 0;
-                    const hasProducts = productCount > 0;
-
-                    return (
-                      <tr key={cat._id} style={{ opacity: isBusy ? 0.5 : 1 }}>
-                        <td style={{ fontWeight: 700 }}>{cat.name}</td>
-                        <td
-                          style={{
-                            fontFamily: 'var(--font-mono)',
-                            fontSize: '0.8rem',
-                            color: 'var(--text-muted)'
-                          }}
-                        >
-                          {cat.slug}
-                        </td>
-                        <td>
-                          {cat.subCategories && cat.subCategories.length > 0 ? (
-                            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                              {cat.subCategories.map((sub) => (
-                                <span key={sub._id} className="badge badge-dark">
-                                  {sub.name}
-                                </span>
-                              ))}
-                            </div>
-                          ) : (
-                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                              None
-                            </span>
-                          )}
-                        </td>
-                        <td>
-                          <span
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.35rem',
-                              fontSize: '0.85rem',
-                              fontWeight: 600,
-                              color: hasProducts
-                                ? 'var(--text-primary)'
-                                : 'var(--text-muted)'
-                            }}
-                          >
-                            <Package size={14} />
-                            {productCount}
-                          </span>
-                        </td>
-                        <td>
-                          <button
-                            type="button"
-                            disabled={isBusy}
-                            onClick={() =>
-                              handleToggleCategory(cat._id, cat.name, cat.isActive)
-                            }
-                            className={`badge ${
-                              cat.isActive ? 'badge-success' : 'badge-danger'
-                            }`}
-                            style={{
-                              cursor: isBusy ? 'wait' : 'pointer',
-                              border: 'none',
-                              fontFamily: 'inherit'
-                            }}
-                            title={cat.isActive ? 'Click to disable' : 'Click to enable'}
-                          >
-                            {cat.isActive ? 'Active' : 'Disabled'}
-                          </button>
-                        </td>
-                        <td style={{ textAlign: 'right' }}>
-                          <button
-                            type="button"
-                            disabled={isBusy}
-                            onClick={() =>
-                              handleDeleteCategory(cat._id, cat.name, productCount)
-                            }
-                            className="btn btn-secondary btn-sm"
-                            style={{
-                              padding: '0.3rem 0.5rem',
-                              color: hasProducts ? '#aaa' : 'red',
-                              borderColor: hasProducts ? '#eee' : '#ffcccc',
-                              cursor: isBusy
-                                ? 'wait'
-                                : hasProducts
-                                ? 'not-allowed'
-                                : 'pointer'
-                            }}
-                            title={
-                              hasProducts
-                                ? `Cannot delete — ${productCount} product${
-                                    productCount === 1 ? '' : 's'
-                                  } assigned`
-                                : 'Delete category'
-                            }
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
+            <div style={{ backgroundColor: '#fff', border: '1px solid var(--border-light)', overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                <thead><tr><th style={{ padding: '1rem' }}>Category</th><th style={{ padding: '1rem' }}>Level</th><th style={{ padding: '1rem' }}>Products</th><th style={{ padding: '1rem', textAlign: 'right' }}>Actions</th></tr></thead>
+                <tbody>{tree.length ? tree.map((category) => renderRow(category)) : <tr><td colSpan="4" style={{ padding: '2rem', textAlign: 'center' }}>No categories yet.</td></tr>}</tbody>
               </table>
             </div>
-          )}
-        </div>
+          </>
+        )}
       </main>
     </div>
   );
+}
+
+function Form({ title, onSubmit, children }) {
+  return <div style={{ backgroundColor: '#fff', border: '1px solid var(--border-light)', padding: '1.25rem', boxShadow: 'var(--shadow-subtle)' }}><h3 style={{ fontSize: '0.9rem', marginBottom: '1rem', textTransform: 'uppercase' }}>{title}</h3><form onSubmit={onSubmit} style={{ display: 'grid', gap: '0.5rem' }}>{children}</form></div>;
 }

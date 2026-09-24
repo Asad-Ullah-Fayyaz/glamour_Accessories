@@ -54,12 +54,12 @@ export default function Register() {
   return (
     <div className="container register-page" style={{ padding: '5rem 1.5rem', maxWidth: '480px' }}>
       <div className="register-header" style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-        <span className="text-uppercase-tracking register-eyebrow" style={{ color: 'var(--text-muted)' }}>NEW CLIENT</span>
-        <h1 className="register-title" style={{ fontFamily: 'var(--font-serif)', fontSize: '2.2rem', marginTop: '0.25rem' }}>Create Account</h1>
+        <span className="text-uppercase-tracking register-eyebrow" style={{ color: '#767676' }}>NEW CLIENT</span>
+        <h1 className="register-title" style={{ fontFamily: 'var(--font-serif)', fontSize: '2.2rem', marginTop: '0.25rem', color: '#000000' }}>Create Account</h1>
       </div>
 
       {errorMsg && (
-        <div className="register-alert" style={{ backgroundColor: '#fce8e6', color: '#c5221f', padding: '0.85rem 1rem', borderRadius: 'var(--radius-sm)', marginBottom: '1.5rem', fontSize: '0.85rem' }}>
+        <div className="register-alert" style={{ backgroundColor: '#F5F5F5', color: '#000000', border: '1px solid #000000', borderLeft: '4px solid #000000', padding: '0.85rem 1rem', borderRadius: 'var(--radius-sm)', marginBottom: '1.5rem', fontSize: '0.85rem' }}>
           {errorMsg}
         </div>
       )}
@@ -112,12 +112,15 @@ export default function Register() {
                 transform: 'translateY(-50%)',
                 border: 'none',
                 background: 'transparent',
-                color: 'var(--text-secondary)',
+                color: '#444444',
                 cursor: 'pointer',
                 fontSize: '0.8rem',
                 fontWeight: 600,
-                padding: 0
+                padding: 0,
+                transition: 'color 0.3s ease'
               }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = '#000000')}
+              onMouseLeave={(e) => (e.currentTarget.style.color = '#444444')}
             >
               {showPassword ? 'Hide' : 'Show'}
             </button>
@@ -147,12 +150,15 @@ export default function Register() {
                 transform: 'translateY(-50%)',
                 border: 'none',
                 background: 'transparent',
-                color: 'var(--text-secondary)',
+                color: '#444444',
                 cursor: 'pointer',
                 fontSize: '0.8rem',
                 fontWeight: 600,
-                padding: 0
+                padding: 0,
+                transition: 'color 0.3s ease'
               }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = '#000000')}
+              onMouseLeave={(e) => (e.currentTarget.style.color = '#444444')}
             >
               {showConfirmPassword ? 'Hide' : 'Show'}
             </button>
@@ -164,8 +170,8 @@ export default function Register() {
         </button>
       </form>
 
-      <div className="register-footer" style={{ textAlign: 'center', marginTop: '2rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-        Already registered? <Link to="/login" className="register-footer-link" style={{ fontWeight: 600, textDecoration: 'underline', color: '#000' }}>Sign In</Link>
+      <div className="register-footer" style={{ textAlign: 'center', marginTop: '2rem', fontSize: '0.85rem', color: '#444444' }}>
+        Already registered? <Link to="/login" className="register-footer-link" style={{ fontWeight: 600, textDecoration: 'underline', color: '#000000' }}>Sign In</Link>
       </div>
 
       <style>{`
@@ -175,6 +181,13 @@ export default function Register() {
         .register-form select {
           width: 100%;
           box-sizing: border-box;
+        }
+
+        .register-footer-link {
+          transition: opacity 0.3s ease;
+        }
+        .register-footer-link:hover {
+          opacity: 0.7;
         }
 
         @media (max-width: 640px) {

@@ -4,7 +4,7 @@ import api from '../../services/api';
 export const loadUser = createAsyncThunk(
   'auth/loadUser',
   async (_, { rejectWithValue }) => {
-    const token = localStorage.getItem('axi_token');
+    const token = localStorage.getItem('glamour_token');
     if (!token) {
       return null;
     }
@@ -13,10 +13,10 @@ export const loadUser = createAsyncThunk(
       if (res.success) {
         return res.user;
       }
-      localStorage.removeItem('axi_token');
+      localStorage.removeItem('glamour_token');
       return rejectWithValue('Failed to load user');
     } catch (err) {
-      localStorage.removeItem('axi_token');
+      localStorage.removeItem('glamour_token');
       return rejectWithValue(err.message || 'Error loading user');
     }
   }
@@ -28,7 +28,7 @@ export const login = createAsyncThunk(
     try {
       const res = await api.post('/auth/login', { email, password });
       if (res.success) {
-        localStorage.setItem('axi_token', res.token);
+        localStorage.setItem('glamour_token', res.token);
         return res.user;
       }
       return rejectWithValue(res.message || 'Login failed');
@@ -44,7 +44,7 @@ export const adminLogin = createAsyncThunk(
     try {
       const res = await api.post('/auth/admin-login', { email, password });
       if (res.success) {
-        localStorage.setItem('axi_token', res.token);
+        localStorage.setItem('glamour_token', res.token);
         return res.user;
       }
       return rejectWithValue(res.message || 'Admin login failed');
@@ -60,7 +60,7 @@ export const register = createAsyncThunk(
     try {
       const res = await api.post('/auth/register', { name, email, password });
       if (res.success) {
-        localStorage.setItem('axi_token', res.token);
+        localStorage.setItem('glamour_token', res.token);
         return res.user;
       }
       return rejectWithValue(res.message || 'Registration failed');
@@ -99,7 +99,7 @@ const authSlice = createSlice({
       state.user = action.payload;
     },
     logout: (state) => {
-      localStorage.removeItem('axi_token');
+      localStorage.removeItem('glamour_token');
       state.user = null;
       state.loading = false;
       state.error = null;

@@ -275,7 +275,9 @@ export default function AdminProducts() {
                 <thead>
                   <tr>
                     <th>Item</th>
-                    <th>Category</th>
+                    <th>L1 Category</th>
+                    <th>L2 Category</th>
+                    <th>L3 Category</th>
                     <th>Price</th>
                     <th>Stock</th>
                     <th>Featured</th>
@@ -284,7 +286,9 @@ export default function AdminProducts() {
                   </tr>
                 </thead>
                 <tbody>
-                  {products.map((p) => (
+                  {products.map((p) => {
+                    const path = p.categoryPath || {};
+                    return (
                     <tr key={p._id}>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -304,9 +308,9 @@ export default function AdminProducts() {
                           </div>
                         </div>
                       </td>
-                      <td style={{ fontSize: '0.85rem' }}>
-                        {p.category?.name || 'Uncategorized'}
-                      </td>
+                      <td style={{ fontSize: '0.85rem' }}>{path.l1?.name || '—'}</td>
+                      <td style={{ fontSize: '0.85rem', color: path.l2 ? 'inherit' : '#ccc' }}>{path.l2?.name || '—'}</td>
+                      <td style={{ fontSize: '0.85rem', color: path.l3 ? 'inherit' : '#ccc' }}>{path.l3?.name || '—'}</td>
                       <td style={{ fontWeight: 700 }}>
                         {productIsOnSale(p) ? (
                           <div>
@@ -369,7 +373,8 @@ export default function AdminProducts() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

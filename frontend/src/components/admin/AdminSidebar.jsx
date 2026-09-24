@@ -64,7 +64,7 @@ export default function AdminSidebar() {
               letterSpacing: '0.1em'
             }}
           >
-            AXI ADMIN
+            GLAMOUR ADMIN
           </h2>
           <span
             style={{

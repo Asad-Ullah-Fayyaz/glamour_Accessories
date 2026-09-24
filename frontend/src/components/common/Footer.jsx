@@ -5,7 +5,6 @@ import { ShieldCheck, Truck, RotateCcw, Clock } from 'lucide-react';
 export default function Footer() {
   const navigate = useNavigate();
 
-  // Scroll to top on any footer navigation
   const goTo = (path) => {
     navigate(path);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -19,19 +18,19 @@ export default function Footer() {
   return (
     <footer
       style={{
-        backgroundColor: 'var(--bg-secondary)',
-        color: 'var(--text-primary)',
+        backgroundColor: '#000000',
+        color: '#FFFFFF',
         paddingTop: '4rem',
         paddingBottom: '2rem',
         marginTop: '6rem',
-        borderTop: '1px solid var(--border-light)'
+        borderTop: '1px solid #000000'
       }}
     >
       {/* Brand Value Pillars */}
       <div
         className="container"
         style={{
-          borderBottom: '1px solid var(--border-light)',
+          borderBottom: '1px solid #333333',
           paddingBottom: '3rem',
           marginBottom: '3rem'
         }}
@@ -44,73 +43,73 @@ export default function Footer() {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <Truck size={28} style={{ color: 'var(--accent-gold)' }} />
+            <Truck size={28} style={{ color: '#FFFFFF' }} />
             <div>
               <h4
                 style={{
                   fontSize: '0.85rem',
                   letterSpacing: '0.1em',
                   textTransform: 'uppercase',
-                  color: 'var(--text-primary)'
+                  color: '#FFFFFF'
                 }}
               >
                 Express Delivery
               </h4>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+              <p style={{ fontSize: '0.75rem', color: '#AAAAAA', marginTop: '2px' }}>
                 Nationwide Cash on Delivery
               </p>
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <ShieldCheck size={28} style={{ color: 'var(--accent-gold)' }} />
+            <ShieldCheck size={28} style={{ color: '#FFFFFF' }} />
             <div>
               <h4
                 style={{
                   fontSize: '0.85rem',
                   letterSpacing: '0.1em',
                   textTransform: 'uppercase',
-                  color: 'var(--text-primary)'
+                  color: '#FFFFFF'
                 }}
               >
                 Guaranteed Quality
               </h4>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+              <p style={{ fontSize: '0.75rem', color: '#AAAAAA', marginTop: '2px' }}>
                 100% Authentic Product Craft
               </p>
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <RotateCcw size={28} style={{ color: 'var(--accent-gold)' }} />
+            <RotateCcw size={28} style={{ color: '#FFFFFF' }} />
             <div>
               <h4
                 style={{
                   fontSize: '0.85rem',
                   letterSpacing: '0.1em',
                   textTransform: 'uppercase',
-                  color: 'var(--text-primary)'
+                  color: '#FFFFFF'
                 }}
               >
                 Hassle-Free Inspection
               </h4>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+              <p style={{ fontSize: '0.75rem', color: '#AAAAAA', marginTop: '2px' }}>
                 Inspect package upon delivery
               </p>
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <Clock size={28} style={{ color: 'var(--accent-gold)' }} />
+            <Clock size={28} style={{ color: '#FFFFFF' }} />
             <div>
               <h4
                 style={{
                   fontSize: '0.85rem',
                   letterSpacing: '0.1em',
                   textTransform: 'uppercase',
-                  color: 'var(--text-primary)'
+                  color: '#FFFFFF'
                 }}
               >
                 Dedicated Concierge
               </h4>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+              <p style={{ fontSize: '0.75rem', color: '#AAAAAA', marginTop: '2px' }}>
                 Support Mon-Sat 9AM-8PM
               </p>
             </div>
@@ -120,12 +119,12 @@ export default function Footer() {
 
       {/* Main Footer Links — 4 columns */}
       <div
-        className="container"
+        className="container footer-links-grid"
         style={{
           display: 'grid',
           gridTemplateColumns: '1.7fr 1fr 1fr 1.2fr',
           gap: '3rem',
-          borderBottom: '1px solid var(--border-light)',
+          borderBottom: '1px solid #333333',
           paddingBottom: '3rem'
         }}
       >
@@ -137,28 +136,28 @@ export default function Footer() {
               fontSize: '1.4rem',
               letterSpacing: '0.1em',
               marginBottom: '1rem',
-              color: 'var(--text-primary)'
+              color: '#FFFFFF'
             }}
           >
-            AXI COLLECTION
+            GLAMOUR ACCESSORIES
           </h3>
           <p
             style={{
               fontSize: '0.85rem',
-              color: 'var(--text-secondary)',
+              color: '#CCCCCC',
               lineHeight: '1.7',
               maxWidth: '360px',
               marginBottom: '1rem'
             }}
           >
-            AXI Collection is a contemporary house of refined lifestyle accessories. We design
+            Glamour Accessories is a contemporary house of refined lifestyle accessories. We design
             and curate luxury timepieces, optical eyewear, and minimalist technical gear for
             discerning individuals.
           </p>
           <p
             style={{
               fontSize: '0.75rem',
-              color: 'var(--text-muted)',
+              color: '#AAAAAA',
               lineHeight: '1.6'
             }}
           >
@@ -175,7 +174,7 @@ export default function Footer() {
               letterSpacing: '0.15em',
               textTransform: 'uppercase',
               marginBottom: '1.25rem',
-              color: 'var(--text-muted)'
+              color: '#AAAAAA'
             }}
           >
             Collections
@@ -195,7 +194,9 @@ export default function Footer() {
               <Link
                 to="/products?category=watches"
                 onClick={(e) => handleLinkClick('/products?category=watches', e)}
-                style={{ color: 'var(--text-secondary)' }}
+                style={{ color: '#CCCCCC', transition: 'color 0.3s ease' }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#FFFFFF')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = '#CCCCCC')}
               >
                 Timepieces & Watches
               </Link>
@@ -204,7 +205,9 @@ export default function Footer() {
               <Link
                 to="/products?category=glasses"
                 onClick={(e) => handleLinkClick('/products?category=glasses', e)}
-                style={{ color: 'var(--text-secondary)' }}
+                style={{ color: '#CCCCCC', transition: 'color 0.3s ease' }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#FFFFFF')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = '#CCCCCC')}
               >
                 Eyewear & Sunglasses
               </Link>
@@ -213,7 +216,9 @@ export default function Footer() {
               <Link
                 to="/products?category=mobile-accessories"
                 onClick={(e) => handleLinkClick('/products?category=mobile-accessories', e)}
-                style={{ color: 'var(--text-secondary)' }}
+                style={{ color: '#CCCCCC', transition: 'color 0.3s ease' }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#FFFFFF')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = '#CCCCCC')}
               >
                 Mobile Accessories
               </Link>
@@ -222,7 +227,9 @@ export default function Footer() {
               <Link
                 to="/products"
                 onClick={(e) => handleLinkClick('/products', e)}
-                style={{ color: 'var(--text-secondary)' }}
+                style={{ color: '#CCCCCC', transition: 'color 0.3s ease' }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#FFFFFF')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = '#CCCCCC')}
               >
                 All Products
               </Link>
@@ -238,7 +245,7 @@ export default function Footer() {
               letterSpacing: '0.15em',
               textTransform: 'uppercase',
               marginBottom: '1.25rem',
-              color: 'var(--text-muted)'
+              color: '#AAAAAA'
             }}
           >
             Client Services
@@ -258,7 +265,9 @@ export default function Footer() {
               <Link
                 to="/track-order"
                 onClick={(e) => handleLinkClick('/track-order', e)}
-                style={{ color: 'var(--text-secondary)' }}
+                style={{ color: '#CCCCCC', transition: 'color 0.3s ease' }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#FFFFFF')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = '#CCCCCC')}
               >
                 Track Your Order
               </Link>
@@ -267,7 +276,9 @@ export default function Footer() {
               <Link
                 to="/products"
                 onClick={(e) => handleLinkClick('/products', e)}
-                style={{ color: 'var(--text-secondary)' }}
+                style={{ color: '#CCCCCC', transition: 'color 0.3s ease' }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#FFFFFF')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = '#CCCCCC')}
               >
                 Shop New Arrivals
               </Link>
@@ -276,7 +287,9 @@ export default function Footer() {
               <Link
                 to="/login"
                 onClick={(e) => handleLinkClick('/login', e)}
-                style={{ color: 'var(--text-secondary)' }}
+                style={{ color: '#CCCCCC', transition: 'color 0.3s ease' }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#FFFFFF')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = '#CCCCCC')}
               >
                 My Account
               </Link>
@@ -285,7 +298,9 @@ export default function Footer() {
               <Link
                 to="/profile"
                 onClick={(e) => handleLinkClick('/profile', e)}
-                style={{ color: 'var(--text-secondary)' }}
+                style={{ color: '#CCCCCC', transition: 'color 0.3s ease' }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#FFFFFF')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = '#CCCCCC')}
               >
                 Order History
               </Link>
@@ -293,7 +308,7 @@ export default function Footer() {
           </ul>
         </div>
 
-        {/* Legal & Policies — replaces the newsletter column */}
+        {/* Legal & Policies */}
         <div>
           <h4
             style={{
@@ -301,7 +316,7 @@ export default function Footer() {
               letterSpacing: '0.15em',
               textTransform: 'uppercase',
               marginBottom: '1.25rem',
-              color: 'var(--text-muted)'
+              color: '#AAAAAA'
             }}
           >
             Legal & Policies
@@ -321,7 +336,9 @@ export default function Footer() {
               <Link
                 to="/returns-policy"
                 onClick={(e) => handleLinkClick('/returns-policy', e)}
-                style={{ color: 'var(--text-secondary)' }}
+                style={{ color: '#CCCCCC', transition: 'color 0.3s ease' }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#FFFFFF')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = '#CCCCCC')}
               >
                 Returns & Replacement
               </Link>
@@ -330,7 +347,9 @@ export default function Footer() {
               <Link
                 to="/shipping-policy"
                 onClick={(e) => handleLinkClick('/shipping-policy', e)}
-                style={{ color: 'var(--text-secondary)' }}
+                style={{ color: '#CCCCCC', transition: 'color 0.3s ease' }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#FFFFFF')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = '#CCCCCC')}
               >
                 Shipping & Delivery
               </Link>
@@ -339,7 +358,9 @@ export default function Footer() {
               <Link
                 to="/privacy-policy"
                 onClick={(e) => handleLinkClick('/privacy-policy', e)}
-                style={{ color: 'var(--text-secondary)' }}
+                style={{ color: '#CCCCCC', transition: 'color 0.3s ease' }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#FFFFFF')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = '#CCCCCC')}
               >
                 Privacy Policy
               </Link>
@@ -348,7 +369,9 @@ export default function Footer() {
               <Link
                 to="/terms"
                 onClick={(e) => handleLinkClick('/terms', e)}
-                style={{ color: 'var(--text-secondary)' }}
+                style={{ color: '#CCCCCC', transition: 'color 0.3s ease' }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#FFFFFF')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = '#CCCCCC')}
               >
                 Terms & Conditions
               </Link>
@@ -357,13 +380,13 @@ export default function Footer() {
         </div>
       </div>
 
-      {/* Policy Highlights Strip — fills the empty space and gives legal weight */}
+      {/* Policy Highlights Strip */}
       <div
         className="container"
         style={{
           paddingTop: '2rem',
           paddingBottom: '1.5rem',
-          borderBottom: '1px solid var(--border-light)'
+          borderBottom: '1px solid #333333'
         }}
       >
         <div
@@ -372,7 +395,7 @@ export default function Footer() {
             gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
             gap: '1.25rem',
             fontSize: '0.75rem',
-            color: 'var(--text-muted)',
+            color: '#AAAAAA',
             lineHeight: '1.6'
           }}
         >
@@ -382,14 +405,14 @@ export default function Footer() {
                 fontWeight: 700,
                 letterSpacing: '0.08em',
                 textTransform: 'uppercase',
-                color: 'var(--text-secondary)',
+                color: '#FFFFFF',
                 marginBottom: '0.35rem',
                 fontSize: '0.7rem'
               }}
             >
               Authenticity Guaranteed
             </div>
-            Every AXI product is inspected for authenticity and finish before it leaves our
+            Every Glamour product is inspected for authenticity and finish before it leaves our
             facility. We do not sell replicas or refurbished items.
           </div>
           <div>
@@ -398,7 +421,7 @@ export default function Footer() {
                 fontWeight: 700,
                 letterSpacing: '0.08em',
                 textTransform: 'uppercase',
-                color: 'var(--text-secondary)',
+                color: '#FFFFFF',
                 marginBottom: '0.35rem',
                 fontSize: '0.7rem'
               }}
@@ -414,7 +437,7 @@ export default function Footer() {
                 fontWeight: 700,
                 letterSpacing: '0.08em',
                 textTransform: 'uppercase',
-                color: 'var(--text-secondary)',
+                color: '#FFFFFF',
                 marginBottom: '0.35rem',
                 fontSize: '0.7rem'
               }}
@@ -436,13 +459,13 @@ export default function Footer() {
           justifyContent: 'space-between',
           alignItems: 'center',
           fontSize: '0.75rem',
-          color: 'var(--text-muted)',
+          color: '#AAAAAA',
           flexWrap: 'wrap',
           gap: '1rem'
         }}
       >
         <p style={{ margin: 0 }}>
-          &copy; {new Date().getFullYear()} AXI Collection. All rights reserved.
+          &copy; {new Date().getFullYear()} Glamour Accessories. All rights reserved.
         </p>
         <p style={{ margin: 0, letterSpacing: '0.05em' }}>
           Designed &amp; Curated in Pakistan.
@@ -451,12 +474,12 @@ export default function Footer() {
 
       <style>{`
         @media (max-width: 900px) {
-          footer .container[style*="grid-template-columns: 1.7fr 1fr 1fr 1.2fr"] {
+          .footer-links-grid {
             grid-template-columns: 1fr 1fr !important;
           }
         }
         @media (max-width: 600px) {
-          footer .container[style*="grid-template-columns: 1.7fr 1fr 1fr 1.2fr"] {
+          .footer-links-grid {
             grid-template-columns: 1fr !important;
           }
         }

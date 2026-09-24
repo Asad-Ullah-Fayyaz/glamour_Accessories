@@ -120,7 +120,7 @@ export default function CartPage() {
                               {item.product.category?.name}
                             </p>
 
-                                                      {/* Customization — only shown when present */}
+                            {/* Customization — only shown when present */}
                             {item.customization &&
                               (item.customization.description ||
                                 item.customization.prescriptionImage ||
@@ -283,6 +283,7 @@ export default function CartPage() {
           font-family: var(--font-serif);
           font-size: 2.5rem;
           margin-bottom: 0.5rem;
+          color: #000000;
         }
 
         .cart-subtitle {
@@ -295,13 +296,15 @@ export default function CartPage() {
         .cart-empty {
           text-align: center;
           padding: 5rem 1rem;
-          background-color: var(--bg-secondary);
+          background-color: #F5F5F5;
+          border: 1px solid #E0E0E0;
           border-radius: var(--radius-sm);
         }
         .cart-empty-title {
           font-family: var(--font-serif);
           font-size: 1.5rem;
           margin-bottom: 0.5rem;
+          color: #000000;
         }
         .cart-empty-text {
           color: var(--text-muted);
@@ -321,15 +324,16 @@ export default function CartPage() {
 
         /* Shipping note */
         .cart-shipping-note {
-          background-color: var(--bg-secondary);
+          background-color: #F5F5F5;
           padding: 1rem 1.25rem;
-          border: 1px solid var(--border-light);
+          border: 1px solid #E0E0E0;
+          border-left: 3px solid #000000;
           margin-bottom: 1.5rem;
           font-size: 0.85rem;
           color: var(--text-secondary);
         }
         .cart-shipping-success {
-          color: #137333;
+          color: #000000;
           font-weight: 600;
         }
 
@@ -344,7 +348,8 @@ export default function CartPage() {
           width: 64px;
           height: 80px;
           object-fit: cover;
-          background-color: var(--bg-tertiary);
+          background-color: #EDEDED;
+          border: 1px solid #E0E0E0;
           flex-shrink: 0;
         }
         .cart-item-info {
@@ -353,9 +358,12 @@ export default function CartPage() {
         .cart-item-name {
           font-weight: 600;
           font-size: 0.9rem;
-          color: var(--text-primary);
+          color: #000000;
           display: block;
           overflow-wrap: anywhere;
+        }
+        .cart-item-name:hover {
+          text-decoration: underline;
         }
         .cart-item-category {
           font-size: 0.75rem;
@@ -366,6 +374,7 @@ export default function CartPage() {
         .cart-item-total {
           font-size: 0.9rem;
           white-space: nowrap;
+          color: #000000;
         }
         .cart-item-total {
           text-align: right;
@@ -377,13 +386,17 @@ export default function CartPage() {
         .cart-item-remove button {
           color: var(--text-muted);
           padding: 0.4rem;
+          transition: color 0.3s ease;
+        }
+        .cart-item-remove button:hover {
+          color: #000000;
         }
 
-                .cart-item-customization {
+        .cart-item-customization {
           margin-top: 0.4rem;
           padding: 0.4rem 0.6rem;
-          background-color: var(--bg-primary);
-          border-left: 2px solid var(--accent-gold);
+          background-color: #F5F5F5;
+          border-left: 2px solid #000000;
           border-radius: var(--radius-sm);
           font-size: 0.72rem;
           line-height: 1.4;
@@ -397,12 +410,12 @@ export default function CartPage() {
         }
 
         .cart-item-customization-text strong {
-          color: var(--text-primary);
+          color: #000000;
           font-weight: 700;
         }
 
         .cart-item-customization-link {
-          color: var(--accent-gold);
+          color: #000000;
           text-decoration: underline;
           font-size: 0.72rem;
           display: inline-block;
@@ -411,13 +424,20 @@ export default function CartPage() {
         /* Quantity control */
         .cart-qty {
           display: inline-flex;
-          border: 1px solid var(--border-light);
+          border: 1px solid #000000;
           align-items: center;
+          border-radius: var(--radius-sm);
+          overflow: hidden;
         }
         .cart-qty button {
           padding: 0.3rem 0.6rem;
           min-width: 32px;
           min-height: 32px;
+          transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        .cart-qty button:hover {
+          background-color: #000000;
+          color: #FFFFFF;
         }
         .cart-qty span {
           padding: 0.3rem 0.6rem;
@@ -425,6 +445,7 @@ export default function CartPage() {
           font-size: 0.85rem;
           min-width: 28px;
           text-align: center;
+          color: #000000;
         }
 
         /* Actions */
@@ -436,22 +457,28 @@ export default function CartPage() {
           margin-top: 1.5rem;
         }
         .cart-clear-btn {
-          color: red;
-          border-color: #ffcccc;
+          color: #000000;
+          border-color: #000000;
+        }
+        .cart-clear-btn:hover {
+          background-color: #000000;
+          color: #FFFFFF;
         }
 
         /* Summary */
         .cart-summary {
-          background-color: var(--bg-secondary);
+          background-color: #F5F5F5;
           padding: 1.75rem;
-          border: 1px solid var(--border-light);
+          border: 1px solid #E0E0E0;
+          border-top: 3px solid #000000;
         }
         .cart-summary-title {
           font-family: var(--font-serif);
           font-size: 1.25rem;
           margin-bottom: 1.25rem;
-          border-bottom: 1px solid var(--border-light);
+          border-bottom: 1px solid #000000;
           padding-bottom: 0.75rem;
+          color: #000000;
         }
         .cart-summary-row {
           display: flex;
@@ -459,6 +486,7 @@ export default function CartPage() {
           gap: 1rem;
           font-size: 0.9rem;
           margin-bottom: 0.75rem;
+          color: #000000;
         }
         .cart-summary-row--last {
           margin-bottom: 1.5rem;
@@ -467,7 +495,7 @@ export default function CartPage() {
           color: var(--text-secondary);
         }
         .cart-summary-total {
-          border-top: 1px solid var(--border-light);
+          border-top: 1px solid #000000;
           padding-top: 1rem;
           margin-bottom: 1.5rem;
           display: flex;
@@ -475,6 +503,7 @@ export default function CartPage() {
           gap: 1rem;
           font-size: 1.1rem;
           font-weight: 700;
+          color: #000000;
         }
 
         /* === Responsive Breakpoints === */
@@ -532,10 +561,10 @@ export default function CartPage() {
             width: 100%;
           }
           .cart-table tr {
-            border: 1px solid var(--border-light);
+            border: 1px solid #000000;
             margin-bottom: 1rem;
             padding: 1rem;
-            background-color: var(--bg-secondary);
+            background-color: #FFFFFF;
           }
           .cart-table td {
             border: none;

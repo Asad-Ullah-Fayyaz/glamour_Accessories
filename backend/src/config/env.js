@@ -4,11 +4,10 @@
  * Never fall back to hardcoded secrets.
  */
 
-const requiredInProduction = ["JWT_SECRET", "MONGODB_URI"];
-
 function validateEnv() {
   const errors = [];
 
+  // ---- JWT ----
   if (!process.env.JWT_SECRET) {
     errors.push(
       "JWT_SECRET is missing. Set JWT_SECRET in environment or backend/.env",
@@ -22,10 +21,13 @@ function validateEnv() {
   // Guard against known compromised/default secrets
   const forbidden = [
     "axi_collection_super_secret_jwt_key_2026_production",
+    "glamour_accessories_super_secret_jwt_key_2026_production",
     "secret",
     "changeme",
     "dev-secret",
-    "secret123"
+    "secret123",
+    "password",
+    "12345678"
   ];
   if (forbidden.some((s) => process.env.JWT_SECRET === s)) {
     errors.push(
@@ -33,9 +35,20 @@ function validateEnv() {
     );
   }
 
+  // Also reject any JWT secret that contains brand words (easy to guess)
+  if (
+    process.env.JWT_SECRET &&
+    /axi|glamour|accessories/i.test(process.env.JWT_SECRET)
+  ) {
+    errors.push(
+      "JWT_SECRET contains brand-related words that are easy to guess. Use a random value."
+    );
+  }
+
   const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
   const frontendUrl = process.env.FRONTEND_URL || process.env.CLIENT_URL;
 
+  // ---- Production-only requirements ----
   if (process.env.NODE_ENV === "production") {
     if (!mongoUri) {
       errors.push("MONGO_URI / MONGODB_URI is required in production.");
@@ -43,14 +56,12 @@ function validateEnv() {
     if (!frontendUrl) {
       errors.push("CLIENT_URL / FRONTEND_URL is required in production for CORS and emails.");
     }
-    // Super Admin is required in production — otherwise you lock yourself out
     if (!process.env.SUPER_ADMIN_EMAIL) {
       errors.push("SUPER_ADMIN_EMAIL is required in production.");
     }
     if (!process.env.SUPER_ADMIN_PASSWORD_HASH) {
       errors.push("SUPER_ADMIN_PASSWORD_HASH is required in production.");
     }
-        // Cloudinary is required in production for image uploads
     if (!process.env.CLOUDINARY_CLOUD_NAME) {
       errors.push("CLOUDINARY_CLOUD_NAME is required in production.");
     }
@@ -92,12 +103,14 @@ const config = {
   },
   get mongoUri() {
     return (
-      process.env.MONGODB_URI || process.env.MONGO_URI || "mongodb://127.0.0.1:27017/axi_collection"
+      process.env.MONGODB_URI ||
+      process.env.MONGO_URI ||
+      "mongodb://localhost:27017/glamour_accessories"
     );
   },
   get allowedOrigins() {
     const origins = [
-      "http://localhost:5173", 
+      "http://localhost:5173",
       "http://127.0.0.1:5173"
     ];
     const clientUrl = process.env.FRONTEND_URL || process.env.CLIENT_URL;
@@ -111,6 +124,7 @@ const config = {
     }
     return origins;
   },
+
   // ---- Super Admin (env-based, not in DB) ----
   get superAdminEmail() {
     return process.env.SUPER_ADMIN_EMAIL || "";
@@ -118,7 +132,8 @@ const config = {
   get superAdminPasswordHash() {
     return process.env.SUPER_ADMIN_PASSWORD_HASH || "";
   },
-    // ---- Cloudinary (image storage) ----
+
+  // ---- Cloudinary (image storage) ----
   get cloudinaryCloudName() {
     return process.env.CLOUDINARY_CLOUD_NAME || "";
   },

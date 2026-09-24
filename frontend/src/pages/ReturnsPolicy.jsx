@@ -9,7 +9,7 @@ export default function ReturnsPolicy() {
       lastUpdated="January 2026"
     >
       <p>
-        At <strong>AXI Collection</strong>, every product is inspected before it leaves our
+        At <strong>Glamour Accessories</strong>, every product is inspected before it leaves our
         facility. If something isn't right with your order, we want to make it right. This
         policy explains exactly what we cover and how to request a replacement.
       </p>

@@ -44,7 +44,7 @@ export default function OrderConfirmationPage() {
         <CheckCircle size={64} className="order-confirm-icon" />
         <h1 className="order-confirm-title">Order Confirmed</h1>
         <p className="order-confirm-subtitle">
-          Thank you for choosing AXI Collection. Your Cash on Delivery order has been logged.
+          Thank you for choosing Glamour Accessories. Your Cash on Delivery order has been logged.
         </p>
       </div>
 
@@ -61,7 +61,7 @@ export default function OrderConfirmationPage() {
           <div className="order-confirm-meta-item">
             <span className="order-confirm-label">Status</span>
             <div>
-              <span className="badge badge-warning order-confirm-badge">
+              <span className="badge badge-dark order-confirm-badge">
                 {order?.status || 'Pending'}
               </span>
             </div>
@@ -105,7 +105,7 @@ export default function OrderConfirmationPage() {
                             <>
                               <span
                                 style={{
-                                  color: 'var(--text-muted)',
+                                  color: '#767676',
                                   fontWeight: 500,
                                   textDecoration: 'line-through',
                                   marginRight: '0.35rem'
@@ -208,7 +208,7 @@ export default function OrderConfirmationPage() {
           margin-bottom: 3rem;
         }
         .order-confirm-icon {
-          color: #137333;
+          color: #000000;
           margin-bottom: 1rem;
         }
         .order-confirm-title {
@@ -216,16 +216,18 @@ export default function OrderConfirmationPage() {
           font-size: 2.4rem;
           margin-bottom: 0.5rem;
           line-height: 1.2;
+          color: #000000;
         }
         .order-confirm-subtitle {
           font-size: 1.05rem;
-          color: var(--text-secondary);
+          color: #444444;
         }
 
         /* Card */
         .order-confirm-card {
-          background-color: var(--bg-secondary);
-          border: 1px solid var(--border-light);
+          background-color: #F5F5F5;
+          border: 1px solid #E0E0E0;
+          border-top: 3px solid #000000;
           padding: 2rem;
           margin-bottom: 2.5rem;
         }
@@ -235,7 +237,7 @@ export default function OrderConfirmationPage() {
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
           gap: 1rem;
-          border-bottom: 1px solid var(--border-light);
+          border-bottom: 1px solid #000000;
           padding-bottom: 1rem;
           margin-bottom: 1.5rem;
         }
@@ -246,12 +248,12 @@ export default function OrderConfirmationPage() {
           font-size: 0.75rem;
           text-transform: uppercase;
           letter-spacing: 0.1em;
-          color: var(--text-muted);
+          color: #767676;
         }
         .order-confirm-ref {
           font-family: var(--font-mono);
           font-size: 1.4rem;
-          color: var(--text-primary);
+          color: #000000;
           margin-top: 2px;
           overflow-wrap: anywhere;
           word-break: break-word;
@@ -259,6 +261,7 @@ export default function OrderConfirmationPage() {
         .order-confirm-value {
           font-size: 1.1rem;
           margin-top: 2px;
+          color: #000000;
         }
         .order-confirm-badge {
           margin-top: 4px;
@@ -270,7 +273,7 @@ export default function OrderConfirmationPage() {
           text-transform: uppercase;
           letter-spacing: 0.1em;
           margin-bottom: 1rem;
-          color: var(--text-secondary);
+          color: #444444;
         }
         .order-confirm-items {
           display: flex;
@@ -283,7 +286,7 @@ export default function OrderConfirmationPage() {
           flex-direction: column;
           gap: 0.6rem;
           padding-bottom: 1rem;
-          border-bottom: 1px solid var(--border-light);
+          border-bottom: 1px solid #E0E0E0;
         }
         .order-confirm-item-block:last-child {
           border-bottom: none;
@@ -301,12 +304,13 @@ export default function OrderConfirmationPage() {
           object-fit: cover;
           flex-shrink: 0;
           border-radius: var(--radius-sm);
-          background-color: var(--bg-tertiary);
+          background-color: #EDEDED;
+          border: 1px solid #E0E0E0;
         }
         .order-confirm-item-name {
           font-size: 0.95rem;
           font-weight: 600;
-          color: var(--text-primary);
+          color: #000000;
           overflow-wrap: anywhere;
           min-width: 0;
         }
@@ -326,11 +330,11 @@ export default function OrderConfirmationPage() {
           line-height: 1.4;
         }
         .order-confirm-price-label {
-          color: var(--text-secondary);
+          color: #444444;
           font-weight: 500;
         }
         .order-confirm-price-value {
-          color: var(--text-primary);
+          color: #000000;
           font-weight: 700;
           white-space: nowrap;
         }
@@ -341,21 +345,21 @@ export default function OrderConfirmationPage() {
           gap: 0.5rem;
           font-size: 1rem;
           font-weight: 700;
-          color: var(--text-primary);
+          color: #000000;
           padding-top: 0.4rem;
           margin-top: 0.15rem;
-          border-top: 1px solid var(--border-light);
+          border-top: 1px solid #000000;
         }
         .order-confirm-rx {
           margin-top: 0.5rem;
           padding-top: 0.5rem;
-          border-top: 1px dashed var(--border-light);
+          border-top: 1px dashed #E0E0E0;
           font-size: 0.75rem;
-          color: var(--text-secondary);
+          color: #444444;
           line-height: 1.5;
         }
         .order-confirm-rx strong {
-          color: var(--text-primary);
+          color: #000000;
           font-weight: 700;
         }
         .order-confirm-rx-link {
@@ -364,19 +368,23 @@ export default function OrderConfirmationPage() {
           gap: 0.35rem;
           margin-top: 0.35rem;
           font-size: 0.75rem;
-          color: var(--accent-gold);
+          color: #000000;
           text-decoration: underline;
+        }
+        .order-confirm-rx-link:hover {
+          opacity: 0.7;
         }
 
         /* Total */
         .order-confirm-total {
-          border-top: 1px solid var(--border-light);
+          border-top: 2px solid #000000;
           padding-top: 1rem;
           display: flex;
           justify-content: space-between;
           gap: 1rem;
           font-size: 1.1rem;
           font-weight: 700;
+          color: #000000;
         }
 
         /* Actions */

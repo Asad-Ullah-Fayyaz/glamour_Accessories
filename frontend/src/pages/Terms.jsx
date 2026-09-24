@@ -5,11 +5,11 @@ export default function Terms() {
   return (
     <PolicyLayout
       title="Terms & Conditions"
-      subtitle="The rules that govern your use of AXI Collection."
+      subtitle="The rules that govern your use of Glamour Accessories."
       lastUpdated="January 2026"
     >
       <p>
-        By accessing or purchasing from AXI Collection, you agree to these terms. Please read
+        By accessing or purchasing from Glamour Accessories, you agree to these terms. Please read
         them carefully.
       </p>
 
@@ -76,14 +76,14 @@ export default function Terms() {
 
       <h2>8. Intellectual Property</h2>
       <p>
-        All content on this site — logos, images, text, designs — is owned by AXI Collection
+        All content on this site — logos, images, text, designs — is owned by Glamour Accessories
         and protected by copyright. You may not copy, reproduce, or use our content without
         written permission.
       </p>
 
       <h2>9. Limitation of Liability</h2>
       <p>
-        To the maximum extent permitted by law, AXI Collection is not liable for:
+        To the maximum extent permitted by law, Glamour Accessories is not liable for:
       </p>
       <ul>
         <li>Indirect, incidental, or consequential damages</li>

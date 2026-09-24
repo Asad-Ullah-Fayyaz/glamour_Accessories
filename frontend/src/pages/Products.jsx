@@ -26,7 +26,6 @@ export default function Products() {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   const categoryParam = searchParams.get('category') || '';
-  const subCategoryParam = searchParams.get('subCategory') || '';
   const searchParam = searchParams.get('search') || '';
   const sortParam = searchParams.get('sort') || 'newest';
   const pageParam = parseInt(searchParams.get('page') || '1', 10);
@@ -60,7 +59,6 @@ export default function Products() {
   useEffect(() => {
     const params = new URLSearchParams();
     if (categoryParam) params.append('category', categoryParam);
-    if (subCategoryParam) params.append('subCategory', subCategoryParam);
     if (searchParam) params.append('search', searchParam);
     if (sortParam) params.append('sort', sortParam);
     if (inStockParam) params.append('inStock', 'true');
@@ -70,11 +68,7 @@ export default function Products() {
     params.append('limit', '12');
 
     dispatch(fetchProducts(params.toString()));
-  }, [dispatch, categoryParam, subCategoryParam, searchParam, sortParam, pageParam, inStockParam, minPrice, maxPrice]);
-
-  const updateParam = (key, value) => {
-    updateParams({ [key]: value });
-  };
+  }, [dispatch, categoryParam, searchParam, sortParam, pageParam, inStockParam, minPrice, maxPrice]);
 
   const updateParams = (updates) => {
     const newParams = new URLSearchParams(searchParams);
@@ -132,9 +126,18 @@ export default function Products() {
     return pages;
   };
 
-  const activeCategoryObj = categories.find((c) => c.slug === categoryParam);
+  const findCategoryBySlug = (nodes, slug) => {
+    for (const node of nodes) {
+      if (node.slug === slug) return node;
+      const found = findCategoryBySlug(node.children || [], slug);
+      if (found) return found;
+    }
+    return null;
+  };
+
+  const activeCategoryObj = findCategoryBySlug(categories, categoryParam);
   const hasActiveFilters =
-    categoryParam || subCategoryParam || searchParam || minPrice || maxPrice || inStockParam;
+    categoryParam || searchParam || minPrice || maxPrice || inStockParam;
 
   return (
     <div className="container products-page" style={{ padding: '3rem 1.5rem' }}>
@@ -148,15 +151,15 @@ export default function Products() {
             justifyContent: 'center',
             gap: '0.5rem',
             fontSize: '0.8rem',
-            color: 'var(--text-muted)',
+            color: '#767676',
             marginBottom: '0.5rem'
           }}
         >
           <Link
             to="/"
-            style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.2s' }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
-            onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
+            style={{ color: '#767676', textDecoration: 'none', transition: 'color 0.2s' }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = '#000000')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = '#767676')}
           >
             Home
           </Link>
@@ -165,9 +168,9 @@ export default function Products() {
 
           <Link
             to="/products"
-            style={{ color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.2s' }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
-            onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
+            style={{ color: '#767676', textDecoration: 'none', transition: 'color 0.2s' }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = '#000000')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = '#767676')}
           >
             Catalog
           </Link>
@@ -175,7 +178,7 @@ export default function Products() {
           {activeCategoryObj && (
             <>
               <ChevronRight size={12} />
-              <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+              <span style={{ color: '#000000', fontWeight: 600 }}>
                 {activeCategoryObj.name}
               </span>
             </>
@@ -187,7 +190,8 @@ export default function Products() {
           style={{
             fontFamily: 'var(--font-serif)',
             fontSize: '2.5rem',
-            textTransform: 'capitalize'
+            textTransform: 'capitalize',
+            color: '#000000'
           }}
         >
           {searchParam
@@ -196,7 +200,7 @@ export default function Products() {
             ? activeCategoryObj.name
             : 'All Products'}
         </h1>
-        <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+        <p style={{ fontSize: '0.9rem', color: '#444444', marginTop: '0.2rem' }}>
           Showing {totalProducts} luxury timepieces, frames, and accessories
         </p>
       </div>
@@ -215,8 +219,9 @@ export default function Products() {
           <aside
             className="filter-panel"
             style={{
-              backgroundColor: 'var(--bg-secondary)',
-              border: '1px solid var(--border-light)',
+              backgroundColor: '#F5F5F5',
+              border: '1px solid #E0E0E0',
+              borderTop: '3px solid #000000',
               borderRadius: 'var(--radius-sm)',
               padding: '1.5rem',
               alignSelf: 'start',
@@ -232,7 +237,7 @@ export default function Products() {
                 top: '0.75rem',
                 right: '0.75rem',
                 padding: '0.4rem',
-                color: 'var(--text-primary)',
+                color: '#000000',
                 cursor: 'pointer'
               }}
               aria-label="Close filters"
@@ -245,7 +250,7 @@ export default function Products() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                borderBottom: '1px solid var(--border-light)',
+                borderBottom: '1px solid #000000',
                 paddingBottom: '0.75rem',
                 marginBottom: '1.5rem'
               }}
@@ -258,7 +263,8 @@ export default function Products() {
                   letterSpacing: '0.1em',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '6px'
+                  gap: '6px',
+                  color: '#000000'
                 }}
               >
                 <Filter size={16} /> Filters
@@ -268,7 +274,7 @@ export default function Products() {
                   onClick={clearAllFilters}
                   style={{
                     fontSize: '0.75rem',
-                    color: 'var(--text-muted)',
+                    color: '#000000',
                     textDecoration: 'underline'
                   }}
                 >
@@ -285,7 +291,7 @@ export default function Products() {
                   fontWeight: 600,
                   textTransform: 'uppercase',
                   letterSpacing: '0.1em',
-                  color: 'var(--text-secondary)',
+                  color: '#444444',
                   marginBottom: '1rem'
                 }}
               >
@@ -300,11 +306,14 @@ export default function Products() {
                 }}
               >
                 <button
-                  onClick={() => updateParams({ category: '', subCategory: '' })}
+                  onClick={() => updateParams({ category: '' })}
                   style={{
                     textAlign: 'left',
                     fontWeight: !categoryParam ? 700 : 400,
-                    color: !categoryParam ? '#000' : 'var(--text-secondary)'
+                    color: !categoryParam ? '#000000' : '#444444',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer'
                   }}
                 >
                   All Categories
@@ -312,20 +321,23 @@ export default function Products() {
                 {categories.map((cat) => (
                   <div key={cat._id}>
                     <button
-                      onClick={() => updateParams({ category: cat.slug, subCategory: '' })}
+                      onClick={() => updateParams({ category: cat.slug })}
                       style={{
                         textAlign: 'left',
                         width: '100%',
                         fontWeight: categoryParam === cat.slug ? 700 : 400,
-                        color: categoryParam === cat.slug ? '#000' : 'var(--text-secondary)'
+                        color: categoryParam === cat.slug ? '#000000' : '#444444',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer'
                       }}
                     >
                       {cat.name}
                     </button>
 
-                    {categoryParam === cat.slug &&
-                      cat.subCategories &&
-                      cat.subCategories.length > 0 && (
+                    {(categoryParam === cat.slug || cat.children?.some((child) =>
+                      child.slug === categoryParam || child.children?.some((grandchild) => grandchild.slug === categoryParam)
+                    )) && cat.children && cat.children.length > 0 && (
                         <div
                           style={{
                             paddingLeft: '1rem',
@@ -335,22 +347,24 @@ export default function Products() {
                             gap: '0.4rem'
                           }}
                         >
-                          {cat.subCategories.map((sub) => (
-                            <button
-                              key={sub._id}
-                              onClick={() => updateParam('subCategory', sub.slug)}
-                              style={{
-                                textAlign: 'left',
-                                fontSize: '0.8rem',
-                                fontWeight: subCategoryParam === sub.slug ? 700 : 400,
-                                color:
-                                  subCategoryParam === sub.slug
-                                    ? '#000'
-                                    : 'var(--text-muted)'
-                              }}
-                            >
-                              &bull; {sub.name}
-                            </button>
+                          {cat.children.map((l2) => (
+                            <div key={l2._id}>
+                              <button
+                                onClick={() => updateParams({ category: l2.slug })}
+                                style={{ textAlign: 'left', fontSize: '0.8rem', fontWeight: categoryParam === l2.slug ? 700 : 400, color: categoryParam === l2.slug ? '#000000' : '#767676', background: 'none', border: 'none', cursor: 'pointer' }}
+                              >
+                                &bull; {l2.name}
+                              </button>
+                              {((categoryParam === l2.slug) || l2.children?.some((l3) => l3.slug === categoryParam)) && l2.children?.length > 0 && (
+                                <div style={{ paddingLeft: '1.5rem', marginTop: '0.35rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                                  {l2.children.map((l3) => (
+                                    <button key={l3._id} onClick={() => updateParams({ category: l3.slug })} style={{ textAlign: 'left', fontSize: '0.78rem', fontWeight: categoryParam === l3.slug ? 700 : 400, color: categoryParam === l3.slug ? '#000000' : '#767676', background: 'none', border: 'none', cursor: 'pointer' }}>
+                                      – {l3.name}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                           ))}
                         </div>
                       )}
@@ -363,7 +377,7 @@ export default function Products() {
             <div
               style={{
                 marginBottom: '2rem',
-                borderTop: '1px solid var(--border-light)',
+                borderTop: '1px solid #E0E0E0',
                 paddingTop: '1.5rem'
               }}
             >
@@ -373,7 +387,7 @@ export default function Products() {
                   fontWeight: 600,
                   textTransform: 'uppercase',
                   letterSpacing: '0.1em',
-                  color: 'var(--text-secondary)',
+                  color: '#444444',
                   marginBottom: '0.75rem'
                 }}
               >
@@ -385,27 +399,29 @@ export default function Products() {
                   alignItems: 'center',
                   gap: '0.5rem',
                   fontSize: '0.85rem',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  color: '#000000'
                 }}
               >
                 <input
                   type="checkbox"
                   checked={inStockParam}
                   onChange={(e) => updateParam('inStock', e.target.checked ? 'true' : '')}
+                  style={{ accentColor: '#000000' }}
                 />
                 In Stock Only
               </label>
             </div>
 
             {/* Price */}
-            <div style={{ borderTop: '1px solid var(--border-light)', paddingTop: '1.5rem' }}>
+            <div style={{ borderTop: '1px solid #E0E0E0', paddingTop: '1.5rem' }}>
               <h4
                 style={{
                   fontSize: '0.75rem',
                   fontWeight: 600,
                   textTransform: 'uppercase',
                   letterSpacing: '0.1em',
-                  color: 'var(--text-secondary)',
+                  color: '#444444',
                   marginBottom: '0.75rem'
                 }}
               >
@@ -451,14 +467,15 @@ export default function Products() {
                 width: '100%',
                 marginTop: '1.5rem',
                 padding: '0.85rem 1.5rem',
-                backgroundColor: 'var(--bg-dark)',
+                backgroundColor: '#000000',
                 color: '#FFFFFF',
                 fontSize: '0.8rem',
                 fontWeight: 600,
                 letterSpacing: '0.1em',
                 textTransform: 'uppercase',
                 borderRadius: 'var(--radius-sm)',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                border: 'none'
               }}
             >
               Show Results
@@ -478,15 +495,15 @@ export default function Products() {
               width: '100%',
               padding: '0.75rem 1rem',
               marginBottom: '1rem',
-              border: '1px solid var(--border-light)',
-              backgroundColor: 'var(--bg-secondary)',
+              border: '1px solid #000000',
+              backgroundColor: '#F5F5F5',
               fontSize: '0.8rem',
               fontWeight: 600,
               letterSpacing: '0.1em',
               textTransform: 'uppercase',
               borderRadius: 'var(--radius-sm)',
               cursor: 'pointer',
-              color: 'var(--text-primary)'
+              color: '#000000'
             }}
           >
             <Filter size={16} /> Filters
@@ -504,18 +521,18 @@ export default function Products() {
               justifyContent: 'space-between',
               alignItems: 'center',
               paddingBottom: '1rem',
-              borderBottom: '1px solid var(--border-light)',
+              borderBottom: '1px solid #000000',
               marginBottom: '2rem',
               flexWrap: 'wrap',
               gap: '0.5rem'
             }}
           >
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+            <span style={{ fontSize: '0.85rem', color: '#444444' }}>
               Showing {products.length} of {totalProducts} items
             </span>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+              <label style={{ fontSize: '0.8rem', color: '#444444' }}>
                 Sort By:
               </label>
               <select
@@ -542,7 +559,8 @@ export default function Products() {
               style={{
                 textAlign: 'center',
                 padding: '5rem 1rem',
-                backgroundColor: 'var(--bg-secondary)',
+                backgroundColor: '#F5F5F5',
+                border: '1px solid #E0E0E0',
                 borderRadius: 'var(--radius-sm)'
               }}
             >
@@ -550,7 +568,8 @@ export default function Products() {
                 style={{
                   fontFamily: 'var(--font-serif)',
                   fontSize: '1.5rem',
-                  marginBottom: '0.5rem'
+                  marginBottom: '0.5rem',
+                  color: '#000000'
                 }}
               >
                 No Products Found
@@ -558,7 +577,7 @@ export default function Products() {
               <p
                 style={{
                   fontSize: '0.9rem',
-                  color: 'var(--text-muted)',
+                  color: '#767676',
                   marginBottom: '1.5rem'
                 }}
               >
@@ -612,7 +631,7 @@ export default function Products() {
                           style={{
                             padding: '0 0.5rem',
                             fontSize: '0.85rem',
-                            color: 'var(--text-muted)',
+                            color: '#767676',
                             userSelect: 'none'
                           }}
                         >
@@ -711,8 +730,10 @@ export default function Products() {
             overflow-y: auto;
             border-radius: 0 !important;
             border: none !important;
+            border-top: 3px solid #000000 !important;
             padding: 3rem 1.5rem 1.5rem !important;
             animation: slideIn 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+            background-color: #FFFFFF !important;
           }
 
           @keyframes slideIn {

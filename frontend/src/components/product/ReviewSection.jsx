@@ -279,7 +279,7 @@ export default function ReviewSection({ productId, productName }) {
               Have you experienced this piece?
             </h3>
             <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
-              Please log in to your AXI Collection account to write a review.
+              Please log in to your Glamour Accessories account to write a review.
             </p>
             <Link to="/login" className="btn btn-primary btn-sm">
               Sign In to Submit Review

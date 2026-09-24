@@ -206,10 +206,10 @@ export default function ProductDetail() {
   if (!product) {
     return (
       <div className="container pdp-notfound" style={{ textAlign: 'center', padding: '6rem 1.5rem' }}>
-        <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '2rem' }}>
+        <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '2rem', color: '#000000' }}>
           Product Not Found
         </h2>
-        <p style={{ marginTop: '0.5rem', color: 'var(--text-muted)' }}>
+        <p style={{ marginTop: '0.5rem', color: '#767676' }}>
           The requested product does not exist or has been retired.
         </p>
         <Link
@@ -233,17 +233,23 @@ export default function ProductDetail() {
           alignItems: 'center',
           gap: '0.5rem',
           fontSize: '0.8rem',
-          color: 'var(--text-muted)',
+          color: '#767676',
           marginBottom: '2.5rem'
         }}
       >
         <Link to="/">Home</Link> <ChevronRight size={12} />
         <Link to="/products">Catalog</Link> <ChevronRight size={12} />
-        <Link to={`/products?category=${product.category?.slug}`}>
-          {product.category?.name}
-        </Link>{' '}
+        {(product.categoryPath?.l1 || product.categoryPath?.l2 || product.categoryPath?.l3) &&
+          [product.categoryPath.l1, product.categoryPath.l2, product.categoryPath.l3]
+            .filter(Boolean)
+            .map((category) => (
+              <React.Fragment key={category._id}>
+                <ChevronRight size={12} />
+                <Link to={`/products?category=${category.slug}`}>{category.name}</Link>
+              </React.Fragment>
+            ))}
         <ChevronRight size={12} />
-        <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+        <span style={{ color: '#000000', fontWeight: 600 }}>
           {product.name}
         </span>
       </div>
@@ -262,11 +268,12 @@ export default function ProductDetail() {
         <div style={{ minWidth: 0 }}>
           <div
             style={{
-              backgroundColor: 'var(--bg-tertiary)',
+              backgroundColor: '#EDEDED',
               aspectRatio: '4/5',
               width: '100%',
               overflow: 'hidden',
-              marginBottom: '1rem'
+              marginBottom: '1rem',
+              border: '1px solid #E0E0E0'
             }}
           >
             <img
@@ -295,10 +302,12 @@ export default function ProductDetail() {
                     height: '100px',
                     border:
                       activeImage === imgUrl
-                        ? '2px solid var(--text-primary)'
-                        : '1px solid var(--border-light)',
+                        ? '2px solid #000000'
+                        : '1px solid #E0E0E0',
                     overflow: 'hidden',
-                    padding: 0
+                    padding: 0,
+                    cursor: 'pointer',
+                    transition: 'border-color 0.2s ease'
                   }}
                 >
                   <img
@@ -323,12 +332,14 @@ export default function ProductDetail() {
               fontSize: '0.75rem',
               letterSpacing: '0.15em',
               textTransform: 'uppercase',
-              color: 'var(--text-muted)',
+              color: '#767676',
               fontWeight: 600
             }}
           >
-            {product.category?.name}{' '}
-            {product.subCategory ? ` / ${product.subCategory.name}` : ''}
+            {[product.categoryPath?.l1, product.categoryPath?.l2, product.categoryPath?.l3]
+              .filter(Boolean)
+              .map((category) => category.name)
+              .join(' / ')}
           </span>
 
           <h1
@@ -338,7 +349,8 @@ export default function ProductDetail() {
               fontSize: '2.4rem',
               fontWeight: 400,
               margin: '0.5rem 0 1rem 0',
-              lineHeight: '1.2'
+              lineHeight: '1.2',
+              color: '#000000'
             }}
           >
             {product.name}
@@ -360,7 +372,7 @@ export default function ProductDetail() {
                 gap: product.isOnSale === true ? '0.4rem' : 0,
                 fontSize: '1.75rem',
                 fontWeight: 700,
-                color: 'var(--text-primary)',
+                color: '#000000',
                 whiteSpace: 'nowrap'
               }}
             >
@@ -369,7 +381,7 @@ export default function ProductDetail() {
                   style={{
                     fontSize: '1rem',
                     fontWeight: 500,
-                    color: 'var(--text-muted)',
+                    color: '#767676',
                     textDecoration: 'line-through'
                   }}
                 >
@@ -382,21 +394,23 @@ export default function ProductDetail() {
             </span>
 
             {product.stock > 0 ? (
-              <span className="badge badge-success">
+              <span className="badge badge-dark">
                 In Stock ({product.stock} units)
               </span>
             ) : (
-              <span className="badge badge-danger">Out of Stock</span>
+              <span className="badge badge-dark">
+                Out of Stock
+              </span>
             )}
           </div>
 
           <p
             style={{
               fontSize: '0.95rem',
-              color: 'var(--text-secondary)',
+              color: '#444444',
               lineHeight: '1.7',
               marginBottom: '2rem',
-              borderTop: '1px solid var(--border-light)',
+              borderTop: '1px solid #000000',
               paddingTop: '1.5rem'
             }}
           >
@@ -409,8 +423,9 @@ export default function ProductDetail() {
               style={{
                 marginBottom: '2rem',
                 padding: '1.5rem',
-                backgroundColor: 'var(--bg-secondary)',
-                border: '1px solid var(--border-light)',
+                backgroundColor: '#F5F5F5',
+                border: '1px solid #E0E0E0',
+                borderLeft: '3px solid #000000',
                 borderRadius: 'var(--radius-sm)'
               }}
             >
@@ -431,7 +446,7 @@ export default function ProductDetail() {
                       fontSize: '1.15rem',
                       fontWeight: 400,
                       marginBottom: '0.4rem',
-                      color: 'var(--text-primary)'
+                      color: '#000000'
                     }}
                   >
                     Customize Your Lenses
@@ -439,7 +454,7 @@ export default function ProductDetail() {
                   <p
                     style={{
                       fontSize: '0.8rem',
-                      color: 'var(--text-muted)',
+                      color: '#767676',
                       lineHeight: '1.5'
                     }}
                   >
@@ -459,16 +474,24 @@ export default function ProductDetail() {
                     alignItems: 'center',
                     gap: '0.4rem',
                     padding: '0.4rem 0.75rem',
-                    border: '1px solid var(--border-light)',
+                    border: '1px solid #000000',
                     borderRadius: 'var(--radius-sm)',
-                    backgroundColor: 'var(--bg-primary)',
+                    backgroundColor: '#FFFFFF',
                     fontSize: '0.7rem',
                     fontWeight: 700,
                     letterSpacing: '0.08em',
                     textTransform: 'uppercase',
-                    color: 'var(--text-primary)',
+                    color: '#000000',
                     cursor: 'pointer',
-                    transition: 'background-color var(--transition-fast), border-color var(--transition-fast)'
+                    transition: 'background-color 0.3s ease, color 0.3s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#000000';
+                    e.currentTarget.style.color = '#FFFFFF';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#FFFFFF';
+                    e.currentTarget.style.color = '#000000';
                   }}
                 >
                   {customizeOpen ? 'Hide' : 'Customize'}
@@ -494,7 +517,7 @@ export default function ProductDetail() {
                       textTransform: 'uppercase',
                       letterSpacing: '0.08em',
                       marginBottom: '0.5rem',
-                      color: 'var(--text-secondary)'
+                      color: '#444444'
                     }}
                   >
                     Prescription Details / Instructions
@@ -517,7 +540,7 @@ export default function ProductDetail() {
                   <p
                     style={{
                       fontSize: '0.7rem',
-                      color: 'var(--text-muted)',
+                      color: '#767676',
                       marginBottom: '1.25rem',
                       textAlign: 'right'
                     }}
@@ -534,7 +557,7 @@ export default function ProductDetail() {
                       textTransform: 'uppercase',
                       letterSpacing: '0.08em',
                       marginBottom: '0.5rem',
-                      color: 'var(--text-secondary)'
+                      color: '#444444'
                     }}
                   >
                     Or Upload a Picture of Your Prescription
@@ -547,8 +570,8 @@ export default function ProductDetail() {
                         alignItems: 'center',
                         gap: '0.75rem',
                         padding: '0.6rem 0.9rem',
-                        border: '1px solid var(--border-light)',
-                        backgroundColor: 'var(--bg-primary)',
+                        border: '1px solid #000000',
+                        backgroundColor: '#FFFFFF',
                         borderRadius: 'var(--radius-sm)',
                         marginBottom: '1rem'
                       }}
@@ -561,7 +584,7 @@ export default function ProductDetail() {
                           height: '48px',
                           objectFit: 'cover',
                           borderRadius: 'var(--radius-sm)',
-                          border: '1px solid var(--border-light)'
+                          border: '1px solid #E0E0E0'
                         }}
                       />
                       <div style={{ flex: 1, minWidth: 0 }}>
@@ -569,7 +592,7 @@ export default function ProductDetail() {
                           style={{
                             fontSize: '0.8rem',
                             fontWeight: 600,
-                            color: 'var(--text-primary)'
+                            color: '#000000'
                           }}
                         >
                           Prescription attached
@@ -577,7 +600,7 @@ export default function ProductDetail() {
                         <div
                           style={{
                             fontSize: '0.7rem',
-                            color: 'var(--text-muted)',
+                            color: '#767676',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap'
@@ -591,12 +614,21 @@ export default function ProductDetail() {
                         onClick={handleRemovePrescriptionImage}
                         style={{
                           fontSize: '0.7rem',
-                          color: '#c53030',
+                          color: '#000000',
                           padding: '0.4rem 0.6rem',
-                          border: '1px solid #feb2b2',
+                          border: '1px solid #000000',
                           borderRadius: 'var(--radius-sm)',
                           cursor: 'pointer',
-                          background: 'transparent'
+                          background: 'transparent',
+                          transition: 'background-color 0.3s ease, color 0.3s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = '#000000';
+                          e.currentTarget.style.color = '#FFFFFF';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                          e.currentTarget.style.color = '#000000';
                         }}
                       >
                         Remove
@@ -609,12 +641,12 @@ export default function ProductDetail() {
                         alignItems: 'center',
                         gap: '0.5rem',
                         padding: '0.7rem 1.2rem',
-                        border: '1px dashed var(--border-light)',
+                        border: '1px dashed #000000',
                         borderRadius: 'var(--radius-sm)',
                         fontSize: '0.8rem',
-                        color: 'var(--text-secondary)',
+                        color: '#444444',
                         cursor: uploading ? 'wait' : 'pointer',
-                        backgroundColor: 'var(--bg-primary)',
+                        backgroundColor: '#FFFFFF',
                         marginBottom: '1rem'
                       }}
                     >
@@ -633,9 +665,10 @@ export default function ProductDetail() {
                     <p
                       style={{
                         fontSize: '0.75rem',
-                        color: '#c53030',
+                        color: '#000000',
                         marginTop: '-0.5rem',
-                        marginBottom: '1rem'
+                        marginBottom: '1rem',
+                        fontWeight: 600
                       }}
                     >
                       {uploadError}
@@ -649,15 +682,15 @@ export default function ProductDetail() {
                       alignItems: 'flex-start',
                       gap: '0.6rem',
                       paddingTop: '1rem',
-                      borderTop: '1px solid var(--border-light)',
+                      borderTop: '1px solid #E0E0E0',
                       fontSize: '0.75rem',
-                      color: 'var(--text-muted)',
+                      color: '#767676',
                       lineHeight: '1.6'
                     }}
                   >
                     <span style={{ flexShrink: 0, marginTop: '1px' }}>ⓘ</span>
                     <span>
-                      If your prescription includes a <strong>cylinder / cylindrical</strong>{' '}
+                      If your prescription includes a <strong style={{ color: '#000000' }}>cylinder / cylindrical</strong>{' '}
                       number, we will contact you on WhatsApp to confirm before dispatching
                       your order.
                     </span>
@@ -669,7 +702,7 @@ export default function ProductDetail() {
                       style={{
                         marginTop: '1.25rem',
                         paddingTop: '1rem',
-                        borderTop: '1px solid var(--border-light)'
+                        borderTop: '1px solid #E0E0E0'
                       }}
                     >
                       <label
@@ -680,7 +713,7 @@ export default function ProductDetail() {
                           textTransform: 'uppercase',
                           letterSpacing: '0.08em',
                           marginBottom: '0.75rem',
-                          color: 'var(--text-secondary)'
+                          color: '#444444'
                         }}
                       >
                         Select Lens Type
@@ -698,12 +731,12 @@ export default function ProductDetail() {
                                 gap: '0.75rem',
                                 padding: '0.75rem 0.9rem',
                                 border: isSelected
-                                  ? '2px solid var(--text-primary)'
-                                  : '1px solid var(--border-light)',
+                                  ? '2px solid #000000'
+                                  : '1px solid #E0E0E0',
                                 borderRadius: 'var(--radius-sm)',
-                                backgroundColor: 'var(--bg-primary)',
+                                backgroundColor: isSelected ? '#F5F5F5' : '#FFFFFF',
                                 cursor: 'pointer',
-                                transition: 'border-color 0.15s'
+                                transition: 'border-color 0.15s, background-color 0.15s'
                               }}
                             >
                               <input
@@ -714,7 +747,8 @@ export default function ProductDetail() {
                                 style={{
                                   marginTop: '3px',
                                   flexShrink: 0,
-                                  cursor: 'pointer'
+                                  cursor: 'pointer',
+                                  accentColor: '#000000'
                                 }}
                               />
                               <div style={{ flex: 1, minWidth: 0 }}>
@@ -731,7 +765,7 @@ export default function ProductDetail() {
                                     style={{
                                       fontSize: '0.85rem',
                                       fontWeight: 700,
-                                      color: 'var(--text-primary)'
+                                      color: '#000000'
                                     }}
                                   >
                                     {opt.name}
@@ -740,7 +774,7 @@ export default function ProductDetail() {
                                     style={{
                                       fontSize: '0.85rem',
                                       fontWeight: 700,
-                                      color: opt.price > 0 ? 'var(--text-primary)' : '#137333',
+                                      color: '#000000',
                                       whiteSpace: 'nowrap'
                                     }}
                                   >
@@ -753,7 +787,7 @@ export default function ProductDetail() {
                                   <p
                                     style={{
                                       fontSize: '0.75rem',
-                                      color: 'var(--text-muted)',
+                                      color: '#767676',
                                       lineHeight: '1.5',
                                       marginTop: '0.25rem'
                                     }}
@@ -779,15 +813,16 @@ export default function ProductDetail() {
               style={{
                 marginBottom: '2rem',
                 padding: '1rem 1.25rem',
-                backgroundColor: 'var(--bg-secondary)',
-                border: '1px solid var(--border-light)',
+                backgroundColor: '#F5F5F5',
+                border: '1px solid #E0E0E0',
+                borderLeft: '3px solid #000000',
                 borderRadius: 'var(--radius-sm)',
                 fontSize: '0.85rem',
-                color: 'var(--text-secondary)',
+                color: '#444444',
                 lineHeight: '1.6'
               }}
             >
-              <strong style={{ color: 'var(--text-primary)' }}>
+              <strong style={{ color: '#000000' }}>
                 Admin Preview Mode.
               </strong>{' '}
               You are viewing this product as the Super Admin. Sign in with a
@@ -803,7 +838,7 @@ export default function ProductDetail() {
                   textTransform: 'uppercase',
                   letterSpacing: '0.1em',
                   marginBottom: '0.5rem',
-                  color: 'var(--text-secondary)'
+                  color: '#444444'
                 }}
               >
                 Select Quantity
@@ -820,14 +855,25 @@ export default function ProductDetail() {
                 <div
                   style={{
                     display: 'inline-flex',
-                    border: '1px solid var(--border-light)'
+                    border: '1px solid #000000',
+                    borderRadius: 'var(--radius-sm)',
+                    overflow: 'hidden'
                   }}
                 >
                   <button
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
                     style={{
                       padding: '0.6rem 1.2rem',
-                      fontSize: '1.1rem'
+                      fontSize: '1.1rem',
+                      transition: 'background-color 0.3s ease, color 0.3s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#000000';
+                      e.currentTarget.style.color = '#FFFFFF';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.color = 'inherit';
                     }}
                     disabled={product.stock <= 0}
                   >
@@ -838,7 +884,8 @@ export default function ProductDetail() {
                     style={{
                       padding: '0.6rem 1.2rem',
                       fontWeight: 700,
-                      fontSize: '1rem'
+                      fontSize: '1rem',
+                      color: '#000000'
                     }}
                   >
                     {quantity}
@@ -850,7 +897,16 @@ export default function ProductDetail() {
                     }
                     style={{
                       padding: '0.6rem 1.2rem',
-                      fontSize: '1.1rem'
+                      fontSize: '1.1rem',
+                      transition: 'background-color 0.3s ease, color 0.3s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#000000';
+                      e.currentTarget.style.color = '#FFFFFF';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.color = 'inherit';
                     }}
                     disabled={product.stock <= 0 || quantity >= product.stock}
                   >
@@ -884,7 +940,7 @@ export default function ProductDetail() {
                 <p
                   style={{
                     marginTop: '0.75rem',
-                    color: '#c53030',
+                    color: '#000000',
                     fontSize: '0.85rem',
                     fontWeight: 600
                   }}
@@ -898,9 +954,10 @@ export default function ProductDetail() {
           {/* Value Banners */}
           <div
             style={{
-              backgroundColor: 'var(--bg-secondary)',
+              backgroundColor: '#F5F5F5',
               padding: '1.5rem',
-              border: '1px solid var(--border-light)',
+              border: '1px solid #E0E0E0',
+              borderTop: '3px solid #000000',
               display: 'flex',
               flexDirection: 'column',
               gap: '1rem'
@@ -912,19 +969,19 @@ export default function ProductDetail() {
                 alignItems: 'flex-start',
                 gap: '0.75rem',
                 fontSize: '0.85rem',
-                color: 'var(--text-secondary)'
+                color: '#444444'
               }}
             >
               <Truck
                 size={20}
                 style={{
-                  color: 'var(--text-primary)',
+                  color: '#000000',
                   flexShrink: 0,
                   marginTop: '2px'
                 }}
               />
               <span>
-                <strong style={{ color: 'var(--text-primary)' }}>
+                <strong style={{ color: '#000000' }}>
                   Cash on Delivery (COD)
                 </strong>{' '}
                 available nationwide. Free shipping on orders over PKR{' '}
@@ -938,13 +995,13 @@ export default function ProductDetail() {
                 alignItems: 'flex-start',
                 gap: '0.75rem',
                 fontSize: '0.85rem',
-                color: 'var(--text-secondary)'
+                color: '#444444'
               }}
             >
               <ShieldCheck
                 size={20}
                 style={{
-                  color: 'var(--text-primary)',
+                  color: '#000000',
                   flexShrink: 0,
                   marginTop: '2px'
                 }}
@@ -961,21 +1018,21 @@ export default function ProductDetail() {
                 alignItems: 'flex-start',
                 gap: '0.75rem',
                 fontSize: '0.85rem',
-                color: 'var(--text-secondary)',
-                borderTop: '1px solid var(--border-light)',
+                color: '#444444',
+                borderTop: '1px solid #E0E0E0',
                 paddingTop: '1rem'
               }}
             >
               <ShieldCheck
                 size={20}
                 style={{
-                  color: 'var(--accent-gold)',
+                  color: '#000000',
                   flexShrink: 0,
                   marginTop: '2px'
                 }}
               />
               <span>
-                <strong style={{ color: 'var(--text-primary)' }}>
+                <strong style={{ color: '#000000' }}>
                   Replacement Guarantee.
                 </strong>{' '}
                 If your order arrives incorrect, damaged, or broken, contact us
@@ -1025,7 +1082,7 @@ export default function ProductDetail() {
             className="pdp-related"
             style={{
               marginTop: '6rem',
-              borderTop: '1px solid var(--border-light)',
+              borderTop: '1px solid #000000',
               paddingTop: '4rem'
             }}
           >
@@ -1034,7 +1091,8 @@ export default function ProductDetail() {
               style={{
                 fontFamily: 'var(--font-serif)',
                 fontSize: '1.8rem',
-                marginBottom: '2rem'
+                marginBottom: '2rem',
+                color: '#000000'
               }}
             >
               Complementary House Pieces
@@ -1138,7 +1196,7 @@ export default function ProductDetail() {
           }
 
           .pdp-delivery-stepper {
-            border-top: 1px solid var(--border-light);
+            border-top: 1px solid #E0E0E0;
             padding-top: 1rem;
           }
           .pdp-delivery-steps {
@@ -1156,12 +1214,12 @@ export default function ProductDetail() {
             text-align: center;
           }
           .pdp-delivery-step strong {
-            color: var(--text-primary);
+            color: #000000;
             font-size: 0.68rem;
             letter-spacing: 0.08em;
           }
           .pdp-delivery-step > span {
-            color: var(--text-muted);
+            color: #767676;
             font-size: 0.7rem;
             line-height: 1.35;
           }
@@ -1171,19 +1229,19 @@ export default function ProductDetail() {
             justify-content: center;
             width: 2rem;
             height: 2rem;
-            border: 1px solid var(--text-primary);
+            border: 1px solid #000000;
             border-radius: 50%;
-            color: var(--text-primary);
+            color: #000000;
           }
           .pdp-delivery-connector {
             flex: 1;
             min-width: 1rem;
             height: 2px;
             margin-top: 1rem;
-            background-color: var(--border-light);
+            background-color: #E0E0E0;
           }
           .pdp-delivery-connector-active {
-            background-color: #C5221F;
+            background-color: #000000;
           }
 
           /* Desktop-only: center the Customer Reviews section horizontally

@@ -56,16 +56,16 @@ export default function TrackOrder() {
   return (
     <div className="container" style={{ padding: '4rem 1.5rem', maxWidth: '840px' }}>
       <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-        <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '2.4rem', marginBottom: '0.5rem' }}>
+        <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '2.4rem', marginBottom: '0.5rem', color: '#000000' }}>
           Track Parcel & Order Status
         </h1>
-        <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
-          Enter your unique AXI Collection Order Reference ID (e.g. ORD-2026-8F42K) to view real-time courier dispatch updates.
+        <p style={{ fontSize: '0.95rem', color: '#444444' }}>
+          Enter your unique Glamour Accessories Order Reference ID (e.g. ORD-2026-8F42K) to view real-time courier dispatch updates.
         </p>
       </div>
 
       {/* Lookup Form */}
-      <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '2rem', border: '1px solid var(--border-light)', marginBottom: '3rem' }}>
+      <div style={{ backgroundColor: '#F5F5F5', padding: '2rem', border: '1px solid #E0E0E0', borderTop: '3px solid #000000', marginBottom: '3rem' }}>
         <form onSubmit={(e) => { e.preventDefault(); handleTrackLookup(); }} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div className="form-group" style={{ marginBottom: 0 }}>
@@ -97,7 +97,7 @@ export default function TrackOrder() {
       </div>
 
       {errorMsg && (
-        <div style={{ backgroundColor: '#fce8e6', color: '#c5221f', padding: '1rem 1.25rem', borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2rem' }}>
+        <div style={{ backgroundColor: '#F5F5F5', color: '#000000', border: '1px solid #000000', borderLeft: '4px solid #000000', padding: '1rem 1.25rem', borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2rem' }}>
           <AlertCircle size={20} />
           <span>{errorMsg}</span>
         </div>
@@ -105,25 +105,25 @@ export default function TrackOrder() {
 
       {/* Tracking Result View */}
       {trackingData && (
-        <div style={{ backgroundColor: '#fff', border: '1px solid var(--border-light)', padding: '2.5rem', boxShadow: 'var(--shadow-subtle)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-light)', paddingBottom: '1.5rem', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+        <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #000000', padding: '2.5rem', boxShadow: 'var(--shadow-subtle)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #000000', paddingBottom: '1.5rem', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
-              <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)' }}>Order ID</span>
-              <h3 style={{ fontFamily: 'var(--font-mono)', fontSize: '1.5rem' }}>{trackingData.orderId}</h3>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+              <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#767676' }}>Order ID</span>
+              <h3 style={{ fontFamily: 'var(--font-mono)', fontSize: '1.5rem', color: '#000000' }}>{trackingData.orderId}</h3>
+              <p style={{ fontSize: '0.8rem', color: '#444444', marginTop: '2px' }}>
                 Placed on {new Date(trackingData.createdAt).toLocaleDateString()} &bull; {trackingData.cityName}
               </p>
             </div>
 
             <div style={{ textAlign: 'right' }}>
-              <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)' }}>Current Status</span>
+              <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#767676' }}>Current Status</span>
               <div><span className="badge badge-dark" style={{ marginTop: '4px', fontSize: '0.85rem' }}>{trackingData.status}</span></div>
             </div>
           </div>
 
           {/* Status Timeline */}
           <div style={{ margin: '3rem 0' }}>
-            <h4 style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '1.5rem', color: 'var(--text-secondary)' }}>
+            <h4 style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '1.5rem', color: '#444444' }}>
               Fulfillment Journey
             </h4>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.5rem', textAlign: 'center' }}>
@@ -135,18 +135,19 @@ export default function TrackOrder() {
                       width: '36px',
                       height: '36px',
                       borderRadius: '50%',
-                      backgroundColor: isActive ? 'var(--bg-dark)' : 'var(--bg-tertiary)',
-                      color: isActive ? '#fff' : 'var(--text-muted)',
+                      backgroundColor: isActive ? '#000000' : '#EDEDED',
+                      color: isActive ? '#FFFFFF' : '#767676',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       fontWeight: 700,
                       fontSize: '0.85rem',
-                      marginBottom: '0.5rem'
+                      marginBottom: '0.5rem',
+                      border: isActive ? '1px solid #000000' : '1px solid #E0E0E0'
                     }}>
                       {isActive ? '✓' : idx + 1}
                     </div>
-                    <span style={{ fontSize: '0.75rem', fontWeight: isActive ? 700 : 400, color: isActive ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: isActive ? 700 : 400, color: isActive ? '#000000' : '#767676' }}>
                       {step}
                     </span>
                   </div>
@@ -157,24 +158,24 @@ export default function TrackOrder() {
 
           {/* Courier Details Box */}
           {trackingData.courierInfo && trackingData.courierInfo.trackingId ? (
-            <div style={{ backgroundColor: 'var(--bg-secondary)', borderLeft: '4px solid var(--accent-gold)', padding: '1.5rem', marginTop: '2rem' }}>
-              <span style={{ fontSize: '0.7rem', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+            <div style={{ backgroundColor: '#F5F5F5', borderLeft: '4px solid #000000', padding: '1.5rem', marginTop: '2rem', border: '1px solid #E0E0E0', borderLeftWidth: '4px', borderLeftColor: '#000000' }}>
+              <span style={{ fontSize: '0.7rem', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#767676' }}>
                 Official Courier Tracking Reference
               </span>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', flexWrap: 'wrap', gap: '1rem' }}>
                 <div>
-                  <h4 style={{ fontSize: '1.1rem', fontWeight: 700 }}>{trackingData.courierInfo.carrier || 'Courier Express'}</h4>
-                  <p style={{ fontFamily: 'var(--font-mono)', fontSize: '1.3rem', letterSpacing: '1px', marginTop: '2px' }}>
+                  <h4 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#000000' }}>{trackingData.courierInfo.carrier || 'Courier Express'}</h4>
+                  <p style={{ fontFamily: 'var(--font-mono)', fontSize: '1.3rem', letterSpacing: '1px', marginTop: '2px', color: '#000000' }}>
                     {trackingData.courierInfo.trackingId}
                   </p>
                 </div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                <div style={{ fontSize: '0.8rem', color: '#444444' }}>
                   Dispatched on: {trackingData.courierInfo.shippedAt ? new Date(trackingData.courierInfo.shippedAt).toLocaleDateString() : 'In Transit'}
                 </div>
               </div>
             </div>
           ) : (
-            <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '1.25rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+            <div style={{ backgroundColor: '#F5F5F5', padding: '1.25rem', fontSize: '0.85rem', color: '#444444', border: '1px solid #E0E0E0' }}>
               &bull; Courier tracking ID will appear here as soon as our warehouse team dispatches your package.
             </div>
           )}

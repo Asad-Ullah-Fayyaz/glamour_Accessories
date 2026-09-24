@@ -34,22 +34,22 @@ export default function HomeReviewsSection() {
       <section
         className="home-reviews-section"
         style={{
-          backgroundColor: 'var(--bg-secondary)',
+          backgroundColor: '#ffffff',
           padding: '5rem 0',
-          borderTop: '1px solid var(--border-light)',
-          borderBottom: '1px solid var(--border-light)'
+          borderTop: '1px solid #000000',
+          borderBottom: '1px solid #000000'
         }}
       >
         <div className="container" style={{ textAlign: 'center', maxWidth: '680px' }}>
-          <div className="home-eyebrow" style={{ color: 'var(--accent-gold)' }}>
+          <div className="home-eyebrow" style={{ color: '#000000' }}>
             CLIENT TESTIMONIALS
           </div>
-          <h2 className="home-heading" style={{ marginBottom: '1rem' }}>
+          <h2 className="home-heading" style={{ marginBottom: '1rem', color: '#000000' }}>
             Collector Experiences
           </h2>
           <p
             style={{
-              color: 'var(--text-secondary)',
+              color: '#444444',
               fontSize: '0.95rem',
               lineHeight: 1.7,
               marginBottom: '2rem'
@@ -70,17 +70,17 @@ export default function HomeReviewsSection() {
     <section
       className="home-reviews-section"
       style={{
-        backgroundColor: 'var(--bg-secondary)',
+        backgroundColor: '#F5F5F5',
         padding: '5.5rem 0',
-        borderTop: '1px solid var(--border-light)',
-        borderBottom: '1px solid var(--border-light)'
+        borderTop: '1px solid #000000',
+        borderBottom: '1px solid #000000'
       }}
     >
       <div className="container">
         <div
           style={{
             display: 'flex',
-            justify: 'space-between',
+            justifyContent: 'space-between',
             alignItems: 'flex-end',
             marginBottom: '3rem',
             flexWrap: 'wrap',
@@ -88,10 +88,10 @@ export default function HomeReviewsSection() {
           }}
         >
           <div>
-            <div className="home-eyebrow" style={{ color: 'var(--accent-gold)' }}>
+            <div className="home-eyebrow" style={{ color: '#000000' }}>
               VERIFIED CLIENT FEEDBACK
             </div>
-            <h2 className="home-heading" style={{ marginBottom: 0 }}>
+            <h2 className="home-heading" style={{ marginBottom: 0, color: '#000000' }}>
               Collector Experiences & Reviews
             </h2>
           </div>
@@ -114,19 +114,20 @@ export default function HomeReviewsSection() {
               style={{
                 backgroundColor: '#FFFFFF',
                 padding: '2rem',
-                border: '1px solid var(--border-light)',
+                border: '1px solid #000000',
+                borderTop: '3px solid #000000',
                 borderRadius: 'var(--radius-sm)',
                 boxShadow: 'var(--shadow-subtle)',
                 display: 'flex',
                 flexDirection: 'column',
-                justify: 'space-between'
+                justifyContent: 'space-between'
               }}
             >
               <div>
                 <div
                   style={{
                     display: 'flex',
-                    justify: 'space-between',
+                    justifyContent: 'space-between',
                     alignItems: 'center',
                     marginBottom: '1.25rem'
                   }}
@@ -136,19 +137,19 @@ export default function HomeReviewsSection() {
                       <Star
                         key={star}
                         size={15}
-                        fill={star <= rev.rating ? 'var(--accent-gold)' : 'none'}
-                        color={star <= rev.rating ? 'var(--accent-gold)' : '#ccc'}
+                        fill={star <= rev.rating ? '#000000' : 'none'}
+                        color={star <= rev.rating ? '#000000' : '#CCCCCC'}
                       />
                     ))}
                   </div>
-                  <Quote size={20} style={{ color: 'var(--accent-gold)', opacity: 0.6 }} />
+                  <Quote size={20} style={{ color: '#000000', opacity: 0.5 }} />
                 </div>
 
                 <p
                   style={{
                     fontFamily: 'var(--font-serif)',
                     fontSize: '1rem',
-                    color: 'var(--text-primary)',
+                    color: '#000000',
                     lineHeight: '1.6',
                     fontStyle: 'italic',
                     marginBottom: '1.5rem'
@@ -160,10 +161,10 @@ export default function HomeReviewsSection() {
 
               <div
                 style={{
-                  borderTop: '1px solid var(--border-light)',
+                  borderTop: '1px solid #000000',
                   paddingTop: '1rem',
                   display: 'flex',
-                  justify: 'space-between',
+                  justifyContent: 'space-between',
                   alignItems: 'center',
                   flexWrap: 'wrap',
                   gap: '0.5rem'
@@ -171,12 +172,12 @@ export default function HomeReviewsSection() {
               >
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <strong style={{ fontSize: '0.875rem', color: 'var(--text-primary)' }}>
+                    <strong style={{ fontSize: '0.875rem', color: '#000000' }}>
                       {rev.name}
                     </strong>
                     <span
                       style={{
-                        color: '#137333',
+                        color: '#000000',
                         fontSize: '0.7rem',
                         display: 'inline-flex',
                         alignItems: 'center',
@@ -192,7 +193,7 @@ export default function HomeReviewsSection() {
                       to={`/products/${rev.product.slug}`}
                       style={{
                         fontSize: '0.75rem',
-                        color: 'var(--text-muted)',
+                        color: '#767676',
                         textDecoration: 'underline'
                       }}
                     >
@@ -200,7 +201,7 @@ export default function HomeReviewsSection() {
                     </Link>
                   )}
                 </div>
-                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                <span style={{ fontSize: '0.7rem', color: '#767676' }}>
                   {new Date(rev.createdAt).toLocaleDateString(undefined, {
                     month: 'short',
                     day: 'numeric',

@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ScrollToTop from './components/common/ScrollToTop';
 
@@ -68,109 +68,132 @@ const RequireAdmin = ({ children }) => {
   return children;
 };
 
+// Layout wrapper — decides whether to show the storefront navbar,
+// cart drawer, footer, and WhatsApp button based on the current route.
+//
+// On any /admin/* route: hide the storefront chrome entirely so the
+// admin console has a clean, distraction-free surface.
+// On all other routes: render the normal storefront chrome.
+function Layout({ children }) {
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith('/admin');
+
+  if (isAdminRoute) {
+    // Minimal admin layout — no Navbar, no CartDrawer, no Footer,
+    // no WhatsApp button. The admin pages themselves render the
+    // AdminSidebar and AdminHeader.
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+        <div style={{ flex: 1 }}>{children}</div>
+      </div>
+    );
+  }
+
+  // Storefront layout — full chrome.
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <Navbar />
+      <CartDrawer />
+            <div style={{ flex: 1, paddingTop: '110px' }}>{children}</div>
+      <Footer />
+      <WhatsAppButton />
+    </div>
+  );
+}
+
 export default function App() {
   return (
     <AuthProvider>
-      <Router>
+      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <ScrollToTop />
-        <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-          <Navbar />
-          <CartDrawer />
+        <Layout>
+          <Routes>
 
-          <div style={{ flex: 1 }}>
-            <Routes>
+            <Route path="/returns-policy" element={<ReturnsPolicy />} />
+            <Route path="/shipping-policy" element={<ShippingPolicy />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/terms" element={<Terms />} />
 
+            {/* Public Storefront Routes */}
+            <Route path="/" element={<Home />} />
+            <Route path="/products" element={<Products />} />
+            <Route path="/products/:slug" element={<ProductDetail />} />
+            <Route path="/cart" element={<CartPage />} />
+            <Route path="/checkout" element={<CheckoutPage />} />
+            <Route path="/order-confirmation" element={<OrderConfirmationPage />} />
+            <Route path="/track-order" element={<TrackOrder />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
 
-               <Route path="/returns-policy" element={<ReturnsPolicy />} />
-                <Route path="/shipping-policy" element={<ShippingPolicy />} />
-                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-                <Route path="/terms" element={<Terms />} />
+            {/* Customer Account Routes */}
+            <Route path="/profile" element={
+              <RequireAuth>
+                <Profile />
+              </RequireAuth>
+            } />
 
+            {/* Admin console */}
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin" element={
+              <RequireAdmin>
+                <AdminDashboard />
+              </RequireAdmin>
+            } />
+            <Route path="/admin/orders" element={
+              <RequireAdmin>
+                <AdminOrders />
+              </RequireAdmin>
+            } />
+            <Route path="/admin/settings" element={
+              <RequireAdmin>
+                <AdminSettings />
+              </RequireAdmin>
+            } />
+            <Route path="/admin/products" element={
+              <RequireAdmin>
+                <AdminProducts />
+              </RequireAdmin>
+            } />
+            <Route path="/admin/products/new" element={
+              <RequireAdmin>
+                <AdminProductEdit />
+              </RequireAdmin>
+            } />
+            <Route path="/admin/products/edit/:id" element={
+              <RequireAdmin>
+                <AdminProductEdit />
+              </RequireAdmin>
+            } />
+            <Route path="/admin/categories" element={
+              <RequireAdmin>
+                <AdminCategories />
+              </RequireAdmin>
+            } />
+            <Route path="/admin/customers" element={
+              <RequireAdmin>
+                <AdminCustomers />
+              </RequireAdmin>
+            } />
+            <Route path="/admin/reviews" element={
+              <RequireAdmin>
+                <AdminReviews />
+              </RequireAdmin>
+            } />
+            <Route path="/admin/home" element={
+              <RequireAdmin>
+                <AdminHomeEditor />
+              </RequireAdmin>
+            } />
+            <Route path="/admin/admins" element={
+              <RequireAdmin>
+                <AdminManageAdmins />
+              </RequireAdmin>
+            } />
 
-              {/* Public Storefront Routes */}
-              <Route path="/" element={<Home />} />
-              <Route path="/products" element={<Products />} />
-              <Route path="/products/:slug" element={<ProductDetail />} />
-              <Route path="/cart" element={<CartPage />} />
-              <Route path="/checkout" element={<CheckoutPage />} />
-              <Route path="/order-confirmation" element={<OrderConfirmationPage />} />
-              <Route path="/track-order" element={<TrackOrder />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-
-              {/* Customer Account Routes */}
-              <Route path="/profile" element={
-                <RequireAuth>
-                  <Profile />
-                </RequireAuth>
-              } />
-
-              {/* Admin console */}
-              <Route path="/admin/login" element={<AdminLogin />} />
-              <Route path="/admin" element={
-                <RequireAdmin>
-                  <AdminDashboard />
-                </RequireAdmin>
-              } />
-              <Route path="/admin/orders" element={
-                <RequireAdmin>
-                  <AdminOrders />
-                </RequireAdmin>
-              } />
-               <Route path="/admin/settings" element={
-                      <RequireAdmin>
-                        <AdminSettings />
-                      </RequireAdmin>
-                    } />
-              <Route path="/admin/products" element={
-                <RequireAdmin>
-                  <AdminProducts />
-                </RequireAdmin>
-              } />
-              <Route path="/admin/products/new" element={
-                <RequireAdmin>
-                  <AdminProductEdit />
-                </RequireAdmin>
-              } />
-              <Route path="/admin/products/edit/:id" element={
-                <RequireAdmin>
-                  <AdminProductEdit />
-                </RequireAdmin>
-              } />
-              <Route path="/admin/categories" element={
-                <RequireAdmin>
-                  <AdminCategories />
-                </RequireAdmin>
-              } />
-              <Route path="/admin/customers" element={
-                <RequireAdmin>
-                  <AdminCustomers />
-                </RequireAdmin>
-              } />
-              <Route path="/admin/reviews" element={
-                <RequireAdmin>
-                  <AdminReviews />
-                </RequireAdmin>
-              } />
-              <Route path="/admin/home" element={
-                <RequireAdmin>
-                <AdminHomeEditor/>
-                </RequireAdmin>
-                }/>
-                <Route path="/admin/admins" element={
-                  <RequireAdmin>
-                  <AdminManageAdmins />
-                  </RequireAdmin>
-                  }/>
-                
-              {/* 404 Catch-all route */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </div>
-
-          <Footer />
-           <WhatsAppButton />  
-        </div>
+            {/* 404 Catch-all route */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Layout>
       </Router>
     </AuthProvider>
   );

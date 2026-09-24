@@ -2,17 +2,58 @@ import React, { useState, useRef } from 'react';
 import { Upload, X, Loader2 } from 'lucide-react';
 import api, { toAbsoluteUrl } from '../../services/api';
 
-export default function ImageUploader({ value, onChange, label = 'Image' }) {
+export default function ImageUploader({
+  value,
+  onChange,
+  label = 'Image',
+  // Default: image-only. Callers that need video must pass type="video" explicitly.
+  type = 'image',
+  accept,
+  hint,
+  maxSizeMB,
+}) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const inputRef = useRef(null);
 
+  const isVideo = type === 'video';
+
+  // Resolve defaults from `type` unless the caller overrode them.
+  const effectiveAccept =
+    accept || (isVideo ? 'video/mp4,video/webm,video/quicktime' : 'image/jpeg,image/jpg,image/png,image/webp');
+  const effectiveHint = hint || (isVideo ? 'MP4, WEBM, MOV — max 50 MB' : 'JPG, PNG, WEBP — max 5 MB');
+  const effectiveMaxMB = maxSizeMB ?? (isVideo ? 50 : 5);
+
   const handleFile = async (file) => {
     if (!file) return;
     setError('');
+
+    // Guard on mime type. Prevents the user from picking a wrong file type
+    // even if their OS ignores the `accept` filter (some do).
+    const isVideoFile = file.type.startsWith('video/');
+    const isImageFile = file.type.startsWith('image/');
+    if (isVideo && !isVideoFile) {
+      setError('Please choose a video file.');
+      if (inputRef.current) inputRef.current.value = '';
+      return;
+    }
+    if (!isVideo && !isImageFile) {
+      setError('Please choose an image file.');
+      if (inputRef.current) inputRef.current.value = '';
+      return;
+    }
+
+    if (file.size > effectiveMaxMB * 1024 * 1024) {
+      setError(`File is too large. Maximum is ${effectiveMaxMB} MB.`);
+      if (inputRef.current) inputRef.current.value = '';
+      return;
+    }
+
     setUploading(true);
     try {
       const formData = new FormData();
+      // The backend field name stays 'image' for both types — the server
+      // sniffs the mimetype and routes to the right Cloudinary resource type.
       formData.append('image', file);
       const res = await api.post('/site-content/homepage/upload', formData);
       if (res.success && res.url) {
@@ -60,11 +101,19 @@ export default function ImageUploader({ value, onChange, label = 'Image' }) {
             maxWidth: '420px'
           }}
         >
-          <img
-            src={toAbsoluteUrl(value)}
-            alt="Preview"
-            style={{ width: '100%', height: 'auto', display: 'block' }}
-          />
+          {isVideo ? (
+            <video
+              src={toAbsoluteUrl(value)}
+              controls
+              style={{ width: '100%', height: 'auto', display: 'block', backgroundColor: '#000' }}
+            />
+          ) : (
+            <img
+              src={toAbsoluteUrl(value)}
+              alt="Preview"
+              style={{ width: '100%', height: 'auto', display: 'block' }}
+            />
+          )}
           <div
             style={{
               display: 'flex',
@@ -136,7 +185,7 @@ export default function ImageUploader({ value, onChange, label = 'Image' }) {
                 Click to upload or drag &amp; drop
               </p>
               <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                JPG, PNG, WEBP — max 5 MB
+                {effectiveHint}
               </p>
             </>
           )}
@@ -150,7 +199,7 @@ export default function ImageUploader({ value, onChange, label = 'Image' }) {
       <input
         ref={inputRef}
         type="file"
-        accept="image/*"
+        accept={effectiveAccept}
         style={{ display: 'none' }}
         onChange={(e) => handleFile(e.target.files?.[0])}
       />

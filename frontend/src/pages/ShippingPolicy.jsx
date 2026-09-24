@@ -9,7 +9,7 @@ export default function ShippingPolicy() {
       lastUpdated="January 2026"
     >
       <p>
-        AXI Collection ships nationwide across Pakistan through trusted courier partners. Every
+        Glamour Accessories ships nationwide across Pakistan through trusted courier partners. Every
         parcel is packed with care and dispatched within 24 hours of order confirmation.
       </p>
 

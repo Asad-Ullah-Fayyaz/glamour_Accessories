@@ -12,7 +12,7 @@ export const AuthProvider = ({ children }) => {
   const reduxLoading = useSelector(selectAuthLoading);
 
   const [user, setUser] = useState(reduxUser);
-  const [token, setToken] = useState(localStorage.getItem('axi_token') || null);
+  const [token, setToken] = useState(localStorage.getItem('glamour_token') || null);
   const [loading, setLoading] = useState(true);
 
   // Sync internal user state with Redux user state
@@ -40,7 +40,7 @@ export const AuthProvider = ({ children }) => {
         }
       } catch (err) {
         if (!ignore) {
-          localStorage.removeItem('axi_token');
+          localStorage.removeItem('glamour_token');
           setToken(null);
           setUser(null);
           dispatch(setReduxUser(null));
@@ -61,7 +61,7 @@ export const AuthProvider = ({ children }) => {
   // Handle multi-tab storage sync
   useEffect(() => {
     const handleStorage = (event) => {
-      if (event.key !== 'axi_token') return;
+      if (event.key !== 'glamour_token') return;
       if (!event.newValue) {
         setUser(null);
         dispatch(setReduxUser(null));
@@ -77,7 +77,7 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     const res = await api.post('/auth/login', { email, password });
     if (res.success) {
-      localStorage.setItem('axi_token', res.token);
+      localStorage.setItem('glamour_token', res.token);
       setToken(res.token);
       setUser(res.user);
       dispatch(setReduxUser(res.user));
@@ -89,7 +89,7 @@ export const AuthProvider = ({ children }) => {
   const adminLogin = async (email, password) => {
     const res = await api.post('/auth/admin-login', { email, password });
     if (res.success) {
-      localStorage.setItem('axi_token', res.token);
+      localStorage.setItem('glamour_token', res.token);
       setToken(res.token);
       setUser(res.user);
       dispatch(setReduxUser(res.user));
@@ -101,7 +101,7 @@ export const AuthProvider = ({ children }) => {
   const register = async (name, email, password) => {
     const res = await api.post('/auth/register', { name, email, password });
     if (res.success) {
-      localStorage.setItem('axi_token', res.token);
+      localStorage.setItem('glamour_token', res.token);
       setToken(res.token);
       setUser(res.user);
       dispatch(setReduxUser(res.user));
@@ -111,7 +111,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    localStorage.removeItem('axi_token');
+    localStorage.removeItem('glamour_token');
     setToken(null);
     setUser(null);
     dispatch(reduxLogout());

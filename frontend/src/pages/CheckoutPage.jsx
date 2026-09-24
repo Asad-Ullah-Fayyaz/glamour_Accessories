@@ -259,7 +259,7 @@ export default function CheckoutPage() {
           {codEnabled ? (
             <div className="checkout-cod-box">
               <div className="checkout-cod-left">
-                <CheckCircle size={20} style={{ color: 'var(--bg-dark)', flexShrink: 0 }} />
+                <CheckCircle size={20} style={{ color: '#000000', flexShrink: 0 }} />
                 <div>
                   <h4 className="checkout-cod-title">Cash on Delivery (COD)</h4>
                   <p className="checkout-cod-desc">
@@ -381,7 +381,7 @@ export default function CheckoutPage() {
                           {item.customization.prescriptionImage && (
                             <span
                               style={{
-                                color: 'var(--accent-gold)',
+                                color: '#000000',
                                 marginLeft: '0.25rem'
                               }}
                             >
@@ -445,16 +445,21 @@ export default function CheckoutPage() {
         }
         .checkout-back {
           font-size: 0.8rem;
-          color: var(--text-muted);
+          color: #767676;
           display: inline-flex;
           align-items: center;
           gap: 4px;
           margin-bottom: 0.5rem;
+          transition: color 0.3s ease;
+        }
+        .checkout-back:hover {
+          color: #000000;
         }
         .checkout-title {
           font-family: var(--font-serif);
           font-size: 2.2rem;
           line-height: 1.2;
+          color: #000000;
         }
 
         /* === Alerts === */
@@ -465,13 +470,16 @@ export default function CheckoutPage() {
           font-size: 0.875rem;
         }
         .checkout-alert--error {
-          background-color: #fce8e6;
-          color: #c5221f;
+          background-color: #F5F5F5;
+          color: #000000;
+          border: 1px solid #000000;
+          border-left: 4px solid #000000;
         }
         .checkout-alert--warn {
-          background-color: #fff5f5;
-          border: 1px solid #feb2b2;
-          color: #c53030;
+          background-color: #F5F5F5;
+          border: 1px solid #000000;
+          border-left: 4px solid #000000;
+          color: #000000;
         }
 
         /* === Layout === */
@@ -493,8 +501,9 @@ export default function CheckoutPage() {
           font-family: var(--font-serif);
           font-size: 1.4rem;
           margin-bottom: 1.5rem;
-          border-bottom: 1px solid var(--border-light);
+          border-bottom: 1px solid #000000;
           padding-bottom: 0.75rem;
+          color: #000000;
         }
         .checkout-section-title--spaced {
           margin: 2.5rem 0 1.5rem 0;
@@ -521,9 +530,9 @@ export default function CheckoutPage() {
 
         /* === COD payment box === */
         .checkout-cod-box {
-          border: 2px solid var(--bg-dark);
+          border: 2px solid #000000;
           padding: 1.25rem;
-          background-color: var(--bg-secondary);
+          background-color: #F5F5F5;
           display: flex;
           align-items: center;
           justify-content: space-between;
@@ -539,32 +548,35 @@ export default function CheckoutPage() {
         .checkout-cod-title {
           font-size: 0.9rem;
           font-weight: 700;
+          color: #000000;
         }
         .checkout-cod-desc {
           font-size: 0.75rem;
-          color: var(--text-secondary);
+          color: #444444;
         }
         .checkout-cod-disabled {
-          border: 1px solid #feb2b2;
+          border: 1px solid #000000;
           padding: 1.25rem;
-          background-color: #fff5f5;
-          color: #c53030;
+          background-color: #F5F5F5;
+          color: #000000;
           font-size: 0.85rem;
           border-radius: var(--radius-sm);
         }
 
         /* === Summary card === */
         .checkout-summary {
-          background-color: var(--bg-secondary);
+          background-color: #F5F5F5;
           padding: 1.75rem;
-          border: 1px solid var(--border-light);
+          border: 1px solid #E0E0E0;
+          border-top: 3px solid #000000;
         }
         .checkout-summary-title {
           font-family: var(--font-serif);
           font-size: 1.25rem;
           margin-bottom: 1.25rem;
-          border-bottom: 1px solid var(--border-light);
+          border-bottom: 1px solid #000000;
           padding-bottom: 0.75rem;
+          color: #000000;
         }
 
         /* Items list */
@@ -582,7 +594,7 @@ export default function CheckoutPage() {
           flex-direction: column;
           gap: 0.6rem;
           padding-bottom: 1rem;
-          border-bottom: 1px solid var(--border-light);
+          border-bottom: 1px solid #E0E0E0;
         }
         .checkout-item:last-child {
           border-bottom: none;
@@ -598,13 +610,14 @@ export default function CheckoutPage() {
           height: 70px;
           object-fit: cover;
           flex-shrink: 0;
+          border: 1px solid #E0E0E0;
         }
         .checkout-item-name {
           flex: 1;
           min-width: 0;
           font-size: 0.9rem;
           font-weight: 600;
-          color: var(--text-primary);
+          color: #000000;
           overflow-wrap: anywhere;
           margin: 0;
         }
@@ -624,11 +637,11 @@ export default function CheckoutPage() {
           line-height: 1.4;
         }
         .checkout-price-label {
-          color: var(--text-secondary);
+          color: #444444;
           font-weight: 500;
         }
         .checkout-price-value {
-          color: var(--text-primary);
+          color: #000000;
           font-weight: 700;
           white-space: nowrap;
         }
@@ -639,27 +652,27 @@ export default function CheckoutPage() {
           gap: 0.5rem;
           font-size: 1rem;
           font-weight: 700;
-          color: var(--text-primary);
+          color: #000000;
           padding-top: 0.4rem;
           margin-top: 0.15rem;
-          border-top: 1px solid var(--border-light);
+          border-top: 1px solid #000000;
         }
 
         .checkout-item-rx {
           font-size: 0.72rem;
-          color: var(--text-muted);
+          color: #767676;
           line-height: 1.5;
           margin: 0;
           overflow-wrap: anywhere;
         }
         .checkout-item-rx strong {
-          color: var(--text-secondary);
+          color: #333333;
           font-weight: 700;
         }
 
         /* Totals */
         .checkout-totals {
-          border-top: 1px solid var(--border-light);
+          border-top: 1px solid #000000;
           padding-top: 1rem;
           font-size: 0.85rem;
         }
@@ -668,10 +681,11 @@ export default function CheckoutPage() {
           justify-content: space-between;
           gap: 0.75rem;
           margin-bottom: 0.5rem;
+          color: #000000;
         }
         .checkout-ship-note {
           font-size: 0.72rem;
-          color: var(--text-muted);
+          color: #767676;
           margin-bottom: 0.5rem;
         }
         .checkout-grand-total {
@@ -682,7 +696,8 @@ export default function CheckoutPage() {
           font-weight: 700;
           margin-top: 1rem;
           padding-top: 0.75rem;
-          border-top: 1px solid var(--border-light);
+          border-top: 1px solid #000000;
+          color: #000000;
         }
 
         .checkout-submit {
@@ -698,10 +713,11 @@ export default function CheckoutPage() {
         .checkout-empty-title {
           font-family: var(--font-serif);
           font-size: 2rem;
+          color: #000000;
         }
         .checkout-empty-text {
           margin-top: 0.5rem;
-          color: var(--text-muted);
+          color: #767676;
         }
         .checkout-empty-btn {
           margin-top: 1.5rem;

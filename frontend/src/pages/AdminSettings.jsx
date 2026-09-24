@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Save, ArrowLeft } from 'lucide-react';
+import { Save } from 'lucide-react';
 import api from '../services/api';
+import AdminSidebar from '../components/admin/AdminSidebar';
 
 export default function AdminSettings() {
   const navigate = useNavigate();
@@ -70,7 +71,9 @@ export default function AdminSettings() {
   const threshold = store.freeShippingThreshold ?? 5000;
 
   return (
-    <div style={{ padding: '2.5rem 1.5rem', display: 'flex', justifyContent: 'center' }}>
+  <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--bg-secondary)' }}>
+    <AdminSidebar />
+    <main style={{ flex: 1, padding: '2.5rem 1.5rem', display: 'flex', justifyContent: 'center' }}>
       <div style={{ width: '100%', maxWidth: '720px' }}>
         {/* Header */}
         <div
@@ -83,27 +86,7 @@ export default function AdminSettings() {
             gap: '1rem'
           }}
         >
-          <div>
-            <button
-              onClick={() => navigate('/admin')}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                fontSize: '0.75rem',
-                color: 'var(--text-muted)',
-                marginBottom: '0.5rem',
-                textTransform: 'uppercase',
-                letterSpacing: '0.1em'
-              }}
-            >
-              <ArrowLeft size={14} /> Back to Dashboard
-            </button>
-            <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '2rem' }}>Store Settings</h1>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-              Store-wide options for payment and shipping.
-            </p>
-          </div>
+          
 
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
             {message && (
@@ -353,6 +336,7 @@ export default function AdminSettings() {
       </Section>
 
       </div>
+    </main>
     </div>
   );
 }

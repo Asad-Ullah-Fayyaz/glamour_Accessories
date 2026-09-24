@@ -42,7 +42,7 @@ export default function Login() {
     <div className="container login-page">
       <div className="login-header">
         <span className="text-uppercase-tracking login-eyebrow">CLIENT PORTAL</span>
-        <h1 className="login-title">Sign In to AXI</h1>
+        <h1 className="login-title">Sign In to Glamour Accessories</h1>
       </div>
 
       {errorMsg && <div className="login-alert">{errorMsg}</div>}
@@ -85,12 +85,15 @@ export default function Login() {
                 transform: 'translateY(-50%)',
                 border: 'none',
                 background: 'transparent',
-                color: 'var(--text-secondary)',
+                color: '#444444',
                 cursor: 'pointer',
                 fontSize: '0.8rem',
                 fontWeight: 600,
-                padding: 0
+                padding: 0,
+                transition: 'color 0.3s ease'
               }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = '#000000')}
+              onMouseLeave={(e) => (e.currentTarget.style.color = '#444444')}
             >
               {showPassword ? 'Hide' : 'Show'}
             </button>
@@ -123,17 +126,20 @@ export default function Login() {
           margin-bottom: 2.5rem;
         }
         .login-eyebrow {
-          color: var(--text-muted);
+          color: #767676;
         }
         .login-title {
           font-family: var(--font-serif);
           font-size: 2.2rem;
           margin-top: 0.25rem;
           line-height: 1.2;
+          color: #000000;
         }
         .login-alert {
-          background-color: #fce8e6;
-          color: #c5221f;
+          background-color: #F5F5F5;
+          color: #000000;
+          border: 1px solid #000000;
+          border-left: 4px solid #000000;
           padding: 0.85rem 1rem;
           border-radius: var(--radius-sm);
           margin-bottom: 1.5rem;
@@ -153,12 +159,16 @@ export default function Login() {
           text-align: center;
           margin-top: 2rem;
           font-size: 0.85rem;
-          color: var(--text-secondary);
+          color: #444444;
         }
         .login-footer-link {
           font-weight: 600;
           text-decoration: underline;
-          color: #000;
+          color: #000000;
+          transition: opacity 0.3s ease;
+        }
+        .login-footer-link:hover {
+          opacity: 0.7;
         }
 
         @media (max-width: 640px) {

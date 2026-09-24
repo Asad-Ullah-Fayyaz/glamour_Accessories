@@ -9,7 +9,7 @@ export default function PrivacyPolicy() {
       lastUpdated="January 2026"
     >
       <p>
-        At AXI Collection, your privacy matters. This policy explains what information we
+        At Glamour Accessories, your privacy matters. This policy explains what information we
         collect, why we collect it, and how we protect it.
       </p>
 
