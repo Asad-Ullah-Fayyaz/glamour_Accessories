@@ -1,23 +1,24 @@
 const Product = require('../models/Product');
 const Category = require('../models/Category');
-const SubCategory = require('../models/SubCategory');
 const slugify = require('slugify');
 const { PAGINATION, SEARCH } = require('../config/constants');
 const { normalizeSaleFields } = require('../utils/pricing');
 
-// Escape user input before using it in $regex (prevents regex injection / ReDoS)
 const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-// Generate a unique slug by appending a counter suffix if needed
 const generateUniqueSlug = async (baseSlug, excludeId = null) => {
   let slug = baseSlug;
   let counter = 1;
   // eslint-disable-next-line no-await-in-loop
-  while (await Product.exists({ slug, ...(excludeId ? { _id: { $ne: excludeId } } : {}) })) {
+  while (
+    await Product.exists({
+      slug,
+      ...(excludeId ? { _id: { $ne: excludeId } } : {})
+    })
+  ) {
     slug = `${baseSlug}-${counter}`;
     counter += 1;
     if (counter > 100) {
-      // extreme fallback — practically unreachable
       slug = `${baseSlug}-${Date.now().toString(36)}`;
       break;
     }
@@ -25,25 +26,73 @@ const generateUniqueSlug = async (baseSlug, excludeId = null) => {
   return slug;
 };
 
-// Controlled local placeholder for products without images (no external random URLs)
 const PLACEHOLDER_IMAGE = '/images/product-placeholder.svg';
 
-// Helper — returns the _id list of active categories. Used to exclude products
-// whose category has been disabled by the admin.
 const getActiveCategoryIds = async () => {
   const activeCats = await Category.find({ isActive: true }).select('_id');
   return activeCats.map((c) => c._id);
 };
 
-// @desc    Get all catalog products with search, filters, sorting & pagination
-// @route   GET /api/products
-// @access  Public
+const buildCategoryPath = async (categoryId) => {
+  if (!categoryId) return { l1: null, l2: null, l3: null };
+
+  const path = { l1: null, l2: null, l3: null };
+  let current = await Category.findById(categoryId).select('name slug level parent').lean();
+  let guard = 0;
+
+  while (current && guard < 4) {
+    if (current.level === 1) path.l1 = current;
+    else if (current.level === 2) path.l2 = current;
+    else if (current.level === 3) path.l3 = current;
+
+    if (!current.parent) break;
+    // eslint-disable-next-line no-await-in-loop
+    current = await Category.findById(current.parent)
+      .select('name slug level parent')
+      .lean();
+    guard += 1;
+  }
+
+  return path;
+};
+
+const attachCategoryPath = async (product) => {
+  if (!product || !product.category) return product;
+  const catId = product.category._id ? product.category._id : product.category;
+  const path = await buildCategoryPath(catId);
+  return { ...product, categoryPath: path };
+};
+
+const attachCategoryPathToMany = async (products) =>
+  Promise.all(products.map((p) => attachCategoryPath(p)));
+
+const getCategorySubtreeIds = async (category) => {
+  const ids = [category._id];
+  if (category.level === 1) {
+    const l2 = await Category.find({ parent: category._id }).select('_id').lean();
+    ids.push(...l2.map((c) => c._id));
+    if (l2.length > 0) {
+      const l3 = await Category.find({ parent: { $in: l2.map((c) => c._id) } })
+        .select('_id')
+        .lean();
+      ids.push(...l3.map((c) => c._id));
+    }
+  } else if (category.level === 2) {
+    const l3 = await Category.find({ parent: category._id }).select('_id').lean();
+    ids.push(...l3.map((c) => c._id));
+  }
+  return ids;
+};
+
+// -------------------------------------------------------------------------
+// PUBLIC
+// -------------------------------------------------------------------------
+
 exports.getProducts = async (req, res, next) => {
   try {
     const {
       search,
       category,
-      subCategory,
       minPrice,
       maxPrice,
       inStock,
@@ -53,20 +102,10 @@ exports.getProducts = async (req, res, next) => {
     } = req.query;
 
     const activeCategoryIds = await getActiveCategoryIds();
+    const query = { isActive: true, category: { $in: activeCategoryIds } };
 
-    const query = {
-      isActive: true,
-      category: { $in: activeCategoryIds }
-    };
-
-    // ============================================================
-    // SEARCH — matches name, description, AND category name
-    // Also handles simple pluralization ("watches" → "watch")
-    // ============================================================
     if (search) {
       const trimmed = escapeRegex(search.trim()).slice(0, SEARCH.MAX_LENGTH);
-
-      // Build term variants so "watches" also matches "watch", "caps" → "cap", etc.
       const variants = new Set([trimmed]);
       if (trimmed.endsWith('es')) variants.add(trimmed.slice(0, -2));
       if (trimmed.endsWith('s')) variants.add(trimmed.slice(0, -1));
@@ -77,24 +116,17 @@ exports.getProducts = async (req, res, next) => {
         orConditions.push({ name: rx }, { description: rx });
       }
 
-      // Also match products whose category name matches the search term
-      // (but only active categories)
       const matchingCategories = await Category.find({
         name: { $regex: trimmed, $options: 'i' },
         isActive: true
       }).select('_id');
 
       if (matchingCategories.length > 0) {
-        orConditions.push({
-          category: { $in: matchingCategories.map((c) => c._id) }
-        });
+        orConditions.push({ category: { $in: matchingCategories.map((c) => c._id) } });
       }
-
       query.$or = orConditions;
     }
-    // ============================================================
 
-    // Category filter by slug — disabled categories return EMPTY results
     if (category) {
       const catObj = await Category.findOne({ slug: category, isActive: true });
       if (!catObj) {
@@ -107,127 +139,103 @@ exports.getProducts = async (req, res, next) => {
           products: []
         });
       }
-      query.category = catObj._id;
+      query.category = { $in: await getCategorySubtreeIds(catObj) };
     }
 
-    // SubCategory filter by slug
-    if (subCategory) {
-      const subCatObj = await SubCategory.findOne({ slug: subCategory, isActive: true });
-      if (!subCatObj) {
-        return res.status(200).json({
-          success: true,
-          count: 0,
-          total: 0,
-          pages: 0,
-          currentPage: Number(page),
-          products: []
-        });
-      }
-      query.subCategory = subCatObj._id;
-    }
-
-    // Price range filter
     if (minPrice || maxPrice) {
       query.price = {};
       if (minPrice) query.price.$gte = Number(minPrice);
       if (maxPrice) query.price.$lte = Number(maxPrice);
     }
+    if (inStock === 'true') query.stock = { $gt: 0 };
 
-    // In-Stock availability filter
-    if (inStock === 'true') {
-      query.stock = { $gt: 0 };
-    }
-
-    // Sort options (whitelist enforced by validator; defense in depth)
-    let sortOptions = { createdAt: -1 }; // default newest
+    let sortOptions = { createdAt: -1 };
     if (sort === 'price-asc') sortOptions = { price: 1 };
     if (sort === 'price-desc') sortOptions = { price: -1 };
     if (sort === 'featured') sortOptions = { isFeatured: -1, createdAt: -1 };
 
-    // Clamp pagination — never allow huge datasets
     const pageNum = Math.min(Math.max(Number(page) || 1, 1), PAGINATION.MAX_PAGE);
-    const limitNum = Math.min(Math.max(Number(limit) || PAGINATION.DEFAULT_LIMIT, 1), PAGINATION.MAX_LIMIT);
+    const limitNum = Math.min(
+      Math.max(Number(limit) || PAGINATION.DEFAULT_LIMIT, 1),
+      PAGINATION.MAX_LIMIT
+    );
     const skip = (pageNum - 1) * limitNum;
 
     const total = await Product.countDocuments(query);
     const products = await Product.find(query)
-      .populate('category', 'name slug')
-      .populate('subCategory', 'name slug')
+      .populate('category', 'name slug level parent')
       .sort(sortOptions)
       .skip(skip)
-      .limit(limitNum);
+      .limit(limitNum)
+      .lean();
+    const enriched = await attachCategoryPathToMany(products);
 
     res.status(200).json({
       success: true,
-      count: products.length,
+      count: enriched.length,
       total,
       pages: Math.ceil(total / limitNum),
       currentPage: pageNum,
-      products
+      products: enriched
     });
   } catch (error) {
     next(error);
   }
 };
 
-// @desc    Get featured products
-// @route   GET /api/products/featured
-// @access  Public
 exports.getFeaturedProducts = async (req, res, next) => {
   try {
     const activeCategoryIds = await getActiveCategoryIds();
-
     const products = await Product.find({
       isActive: true,
       isFeatured: true,
       category: { $in: activeCategoryIds }
     })
-      .populate('category', 'name slug')
-      .populate('subCategory', 'name slug')
+      .populate('category', 'name slug level parent')
       .limit(8)
-      .sort('-createdAt');
-
-    res.status(200).json({
-      success: true,
-      count: products.length,
-      products
-    });
+      .sort('-createdAt')
+      .lean();
+    const enriched = await attachCategoryPathToMany(products);
+    res.status(200).json({ success: true, count: enriched.length, products: enriched });
   } catch (error) {
     next(error);
   }
 };
 
-// @desc    Get product details by slug
-// @route   GET /api/products/:slug
-// @access  Public
 exports.getProductBySlug = async (req, res, next) => {
   try {
     const activeCategoryIds = await getActiveCategoryIds();
-
     const product = await Product.findOne({
       slug: req.params.slug,
       isActive: true,
       category: { $in: activeCategoryIds }
     })
-      .populate('category', 'name slug')
-      .populate('subCategory', 'name slug');
+      .populate('category', 'name slug level parent')
+      .lean();
 
     if (!product) {
       return res.status(404).json({ success: false, message: 'Product not found' });
     }
-
-    res.status(200).json({
-      success: true,
-      product
-    });
+    res.status(200).json({ success: true, product: await attachCategoryPath(product) });
   } catch (error) {
     next(error);
   }
 };
 
-// @desc    Get related products in same category
-// @route   GET /api/products/:id/related
-// @access  Public
+exports.getProductById = async (req, res, next) => {
+  try {
+    const product = await Product.findById(req.params.id)
+      .populate('category', 'name slug level parent')
+      .lean();
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+    res.status(200).json({ success: true, product: await attachCategoryPath(product) });
+  } catch (error) {
+    next(error);
+  }
+};
+
 exports.getRelatedProducts = async (req, res, next) => {
   try {
     const currentProduct = await Product.findById(req.params.id);
@@ -236,52 +244,32 @@ exports.getRelatedProducts = async (req, res, next) => {
     }
 
     const activeCategoryIds = await getActiveCategoryIds();
+    const assignedCategory = await Category.findById(currentProduct.category);
+    const catIds = assignedCategory ? await getCategorySubtreeIds(assignedCategory) : [];
+    const activeIds = catIds.filter((id) =>
+      activeCategoryIds.some((activeId) => activeId.toString() === id.toString())
+    );
 
-    // Recommend primarily from same sub-category, falling back to same category
-    let related = [];
-    if (currentProduct.subCategory) {
-      related = await Product.find({
-        subCategory: currentProduct.subCategory,
-        _id: { $ne: currentProduct._id },
-        isActive: true,
-        category: { $in: activeCategoryIds }
-      })
-        .limit(4)
-        .populate('category', 'name slug');
-    }
-
-    if (related.length < 4) {
-      const excludeIds = [currentProduct._id, ...related.map((r) => r._id)];
-
-      // Only fall back to category if the parent category is active
-      const catIsActive = activeCategoryIds.some(
-        (id) => id.toString() === currentProduct.category?.toString()
-      );
-
-      const categoryFallback = catIsActive
-        ? await Product.find({
-            category: currentProduct.category,
-            _id: { $nin: excludeIds },
-            isActive: true
-          })
-            .limit(4 - related.length)
-            .populate('category', 'name slug')
-        : [];
-
-      related = [...related, ...categoryFallback];
-    }
-
+    const related = await Product.find({
+      _id: { $ne: currentProduct._id },
+      isActive: true,
+      category: { $in: activeIds }
+    })
+      .limit(4)
+      .populate('category', 'name slug level parent')
+      .lean();
     res.status(200).json({
       success: true,
-      products: related
+      products: await attachCategoryPathToMany(related)
     });
   } catch (error) {
     next(error);
   }
 };
 
-// --- ADMIN PRODUCT CRUD ---
-// (unchanged — admin must still see products in disabled categories)
+// -------------------------------------------------------------------------
+// ADMIN CRUD
+// -------------------------------------------------------------------------
 
 exports.createProduct = async (req, res, next) => {
   try {
@@ -291,7 +279,6 @@ exports.createProduct = async (req, res, next) => {
       price,
       stock,
       category,
-      subCategory,
       images,
       isFeatured,
       isCustomizable,
@@ -304,18 +291,26 @@ exports.createProduct = async (req, res, next) => {
     if (saleFields.error) {
       return res.status(400).json({ success: false, message: saleFields.error });
     }
+    if (!category) {
+      return res.status(400).json({
+        success: false,
+        message: 'Category (L1/L2/L3) is required'
+      });
+    }
 
-    const baseSlug = slugify(name, { lower: true, strict: true });
-    const slug = await generateUniqueSlug(baseSlug);
+    const catDoc = await Category.findById(category);
+    if (!catDoc) {
+      return res.status(404).json({ success: false, message: 'Category not found' });
+    }
 
+    const slug = await generateUniqueSlug(slugify(name, { lower: true, strict: true }));
     const productData = {
       name,
       slug,
       description,
       price: Number(price),
       stock: Number(stock),
-      category,
-      subCategory: subCategory || null,
+      category: catDoc._id,
       images: Array.isArray(images) && images.length > 0 ? images : [PLACEHOLDER_IMAGE],
       isFeatured: Boolean(isFeatured),
       isCustomizable: Boolean(isCustomizable),
@@ -326,12 +321,17 @@ exports.createProduct = async (req, res, next) => {
     };
 
     const normalizedSalePrice = Number(salePrice);
-    if (salePrice !== undefined && salePrice !== null && salePrice !== '' && Number.isFinite(normalizedSalePrice) && normalizedSalePrice >= 0) {
+    if (
+      salePrice !== undefined &&
+      salePrice !== null &&
+      salePrice !== '' &&
+      Number.isFinite(normalizedSalePrice) &&
+      normalizedSalePrice >= 0
+    ) {
       productData.salePrice = normalizedSalePrice;
     }
 
     const product = await Product.create(productData);
-
     res.status(201).json({ success: true, product });
   } catch (error) {
     next(error);
@@ -340,9 +340,22 @@ exports.createProduct = async (req, res, next) => {
 
 exports.updateProduct = async (req, res, next) => {
   try {
-    
-const { name, description, price, stock, category, subCategory, images, isFeatured, isActive, isCustomizable, isOnSale, salePrice, newIs } = req.body;
+    const {
+      name,
+      description,
+      price,
+      stock,
+      category,
+      images,
+      isFeatured,
+      isActive,
+      isCustomizable,
+      isOnSale,
+      salePrice,
+      newIs
+    } = req.body;
     const updateData = {};
+
     if (req.body.onSale !== undefined || req.body.previousPrice !== undefined) {
       const existingProduct = await Product.findById(req.params.id).select('price');
       const saleFields = normalizeSaleFields({
@@ -356,9 +369,9 @@ const { name, description, price, stock, category, subCategory, images, isFeatur
       updateData.onSale = saleFields.onSale;
       updateData.previousPrice = saleFields.previousPrice;
     }
+
     if (name) {
       updateData.name = name;
-      // Ensure the new slug is unique (excluding this product itself)
       updateData.slug = await generateUniqueSlug(
         slugify(name, { lower: true, strict: true }),
         req.params.id
@@ -367,14 +380,22 @@ const { name, description, price, stock, category, subCategory, images, isFeatur
     if (description !== undefined) updateData.description = description;
     if (price !== undefined && price !== '') updateData.price = Number(price);
     if (stock !== undefined && stock !== '') updateData.stock = Number(stock);
-    if (category) updateData.category = category;
-    if (subCategory !== undefined) updateData.subCategory = subCategory || null;
+
+    if (category) {
+      const catDoc = await Category.findById(category);
+      if (!catDoc) {
+        return res.status(404).json({ success: false, message: 'Category not found' });
+      }
+      updateData.category = catDoc._id;
+    }
+
     if (images && Array.isArray(images)) updateData.images = images;
     if (isFeatured !== undefined) updateData.isFeatured = Boolean(isFeatured);
     if (isActive !== undefined) updateData.isActive = Boolean(isActive);
-     if (isCustomizable !== undefined) updateData.isCustomizable = Boolean(isCustomizable);
+    if (isCustomizable !== undefined) updateData.isCustomizable = Boolean(isCustomizable);
     if (isOnSale !== undefined) updateData.isOnSale = Boolean(isOnSale);
     if (newIs !== undefined) updateData.newIs = Boolean(newIs);
+
     if (salePrice !== undefined && salePrice !== null && salePrice !== '') {
       const normalizedSalePrice = Number(salePrice);
       if (Number.isFinite(normalizedSalePrice) && normalizedSalePrice >= 0) {
@@ -382,9 +403,13 @@ const { name, description, price, stock, category, subCategory, images, isFeatur
       }
     }
 
-    const product = await Product.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true });
-    if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
-
+    const product = await Product.findByIdAndUpdate(req.params.id, updateData, {
+      new: true,
+      runValidators: true
+    });
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
     res.status(200).json({ success: true, product });
   } catch (error) {
     next(error);
@@ -394,8 +419,9 @@ const { name, description, price, stock, category, subCategory, images, isFeatur
 exports.deleteProduct = async (req, res, next) => {
   try {
     const product = await Product.findByIdAndDelete(req.params.id);
-    if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
-
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
     res.status(200).json({ success: true, message: 'Product deleted successfully' });
   } catch (error) {
     next(error);
@@ -405,31 +431,13 @@ exports.deleteProduct = async (req, res, next) => {
 exports.uploadImages = async (req, res, next) => {
   try {
     if (!req.files || req.files.length === 0) {
-      return res.status(400).json({ success: false, message: 'Please upload at least one image file' });
+      return res.status(400).json({
+        success: false,
+        message: 'Please upload at least one image file'
+      });
     }
-
- // Cloudinary returns the full HTTPS URL in file.path
-    const imagePaths = req.files.map(file => file.path);
+    const imagePaths = req.files.map((file) => file.path);
     res.status(200).json({ success: true, images: imagePaths });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Get single product by MongoDB _id (admin use)
-// @route   GET /api/products/id/:id
-// @access  Public (or admin — your choice)
-exports.getProductById = async (req, res, next) => {
-  try {
-    const product = await Product.findById(req.params.id)
-      .populate('category', 'name slug')
-      .populate('subCategory', 'name slug');
-
-    if (!product) {
-      return res.status(404).json({ success: false, message: 'Product not found' });
-    }
-
-    res.status(200).json({ success: true, product });
   } catch (error) {
     next(error);
   }

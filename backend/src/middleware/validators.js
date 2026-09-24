@@ -63,11 +63,6 @@ const paginationRules = [
     .trim()
     .isSlug()
     .withMessage("Invalid category"),
-  query("subCategory")
-    .optional({ checkFalsy: true })
-    .trim()
-    .isSlug()
-    .withMessage("Invalid subcategory"),
   query("minPrice")
     .optional({ checkFalsy: true })
     .isFloat({ min: 0 })
@@ -145,10 +140,6 @@ const productRules = [
     .optional({ checkFalsy: true })
     .isMongoId()
     .withMessage("Invalid category"),
-  body("subCategory")
-    .optional({ checkFalsy: true })
-    .isMongoId()
-    .withMessage("Invalid subcategory"),
   body("images")
     .optional()
     .isArray({ max: 8 })
@@ -207,7 +198,6 @@ const createProductRules = [
     .exists({ checkFalsy: true })
     .isMongoId()
     .withMessage("A valid category is required"),
-  body("subCategory").optional({ checkFalsy: true }).isMongoId(),
   body("images").optional().isArray({ max: 8 }),
   body("images.*").optional().trim().isString().isLength({ max: 2048 }),
   body("onSale").optional().isBoolean(),
@@ -328,15 +318,23 @@ const categoryRules = [
     .trim()
     .notEmpty()
     .withMessage("Category name is required")
-    .isLength({ max: 80 }),
+    .isLength({ min: 1, max: 150 })
+    .withMessage("Category name must be 1-150 characters"),
   body("description")
     .optional({ checkFalsy: true })
     .trim()
-    .isLength({ max: 500 }),
-  body("categoryId")
+    .isLength({ max: 500 })
+    .withMessage("Description cannot exceed 500 characters"),
+  body("image")
+    .optional({ checkFalsy: true })
+    .trim()
+    .isString()
+    .isLength({ max: 2048 }),
+  body("parent")
     .optional({ checkFalsy: true })
     .isMongoId()
-    .withMessage("Invalid category reference"),
+    .withMessage("Parent must be a valid category id"),
+  body("isActive").optional().isBoolean().customSanitizer(Boolean),
 ];
 
 // Final step in validation chains — collects errors and returns a clean 400

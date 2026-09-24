@@ -5,30 +5,26 @@ const {
   updateHomepageContent
 } = require('../controllers/siteContentController');
 const { protect, requireAdmin } = require('../middleware/auth');
-const upload = require('../middleware/upload');
+const uploadHeroMedia = require('../middleware/uploadHeroMedia');
 
-// Public read
+// Public read — the frontend calls this on every page load
 router.get('/homepage', getHomepageContent);
 
-// Admin update
+// Admin update — the "Save Changes" button calls this
 router.put('/homepage', protect, requireAdmin, updateHomepageContent);
 
-// Admin image upload (reuses existing product upload middleware)
+// Admin media upload — accepts images AND videos
+// (uses the hero-specific multer instance, not the shared image-only one)
 router.post(
   '/homepage/upload',
   protect,
   requireAdmin,
-  upload.single('image'),
+  uploadHeroMedia.single('image'),
   (req, res) => {
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'No file uploaded' });
     }
-
-    // multer.diskStorage puts the file in `backend/uploads/`
-    // req.file.filename is the generated name.
-        // Cloudinary returns the full HTTPS URL in req.file.path
     const url = req.file.path;
-
     res.status(200).json({ success: true, url });
   }
 );

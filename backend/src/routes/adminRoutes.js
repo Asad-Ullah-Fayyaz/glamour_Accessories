@@ -7,14 +7,16 @@ const {
   getCustomers,
   getAdminProducts,
   getProductCountsByCategory,
-  getAdminCategories,
-  toggleCategoryStatus,
-  deleteCategory,
   getAdmins,
   createAdmin,
   updateAdmin,
   deleteAdmin
 } = require('../controllers/adminController');
+const {
+  getAdminCategories,
+  toggleCategoryStatus,
+  deleteCategory
+} = require('../controllers/categoryController');
 const {
   getAdminReviews,
   updateReviewStatus,

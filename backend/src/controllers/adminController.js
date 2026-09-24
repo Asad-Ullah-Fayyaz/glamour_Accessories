@@ -262,12 +262,10 @@ exports.getAdminProducts = async (req, res, next) => {
   try {
     const { search, category, limit = 50, page = 1 } = req.query;
 
-    // No isActive filter — admin sees everything
     const query = {};
 
-    // Category filter — only apply if it's not "All" or empty
     if (category && category !== 'All') {
-      const catObj = await Category.findOne({ slug: category }).select('_id');
+      const catObj = await Category.findOne({ slug: category }).select('_id level');
       if (!catObj) {
         return res.status(200).json({
           success: true,
@@ -278,7 +276,23 @@ exports.getAdminProducts = async (req, res, next) => {
           products: []
         });
       }
-      query.category = catObj._id;
+
+      const catIds = [catObj._id];
+      if (catObj.level === 1) {
+        const l2 = await Category.find({ parent: catObj._id }).select('_id').lean();
+        catIds.push(...l2.map((c) => c._id));
+        if (l2.length > 0) {
+          const l3 = await Category.find({ parent: { $in: l2.map((c) => c._id) } })
+            .select('_id')
+            .lean();
+          catIds.push(...l3.map((c) => c._id));
+        }
+      } else if (catObj.level === 2) {
+        const l3 = await Category.find({ parent: catObj._id }).select('_id').lean();
+        catIds.push(...l3.map((c) => c._id));
+      }
+
+      query.category = { $in: catIds };
     }
 
     if (search) {
@@ -295,19 +309,42 @@ exports.getAdminProducts = async (req, res, next) => {
 
     const total = await Product.countDocuments(query);
     const products = await Product.find(query)
-      .populate('category', 'name slug')
-      .populate('subCategory', 'name slug')
+      .populate('category', 'name slug level parent')
       .sort('-createdAt')
       .skip(skip)
       .limit(limitNum);
 
+    const attachPath = async (product) => {
+      if (!product.category) {
+        return { ...product.toObject(), categoryPath: { l1: null, l2: null, l3: null } };
+      }
+
+      const path = { l1: null, l2: null, l3: null };
+      let current = product.category;
+      let guard = 0;
+      while (current && guard < 4) {
+        if (current.level === 1) path.l1 = current;
+        else if (current.level === 2) path.l2 = current;
+        else if (current.level === 3) path.l3 = current;
+        if (!current.parent) break;
+        // eslint-disable-next-line no-await-in-loop
+        current = await Category.findById(current.parent)
+          .select('name slug level parent')
+          .lean();
+        guard += 1;
+      }
+      return { ...product.toObject(), categoryPath: path };
+    };
+
+    const enriched = await Promise.all(products.map(attachPath));
+
     res.status(200).json({
       success: true,
-      count: products.length,
+      count: enriched.length,
       total,
       pages: Math.ceil(total / limitNum),
       currentPage: pageNum,
-      products
+      products: enriched
     });
   } catch (error) {
     next(error);
@@ -353,105 +390,6 @@ exports.getProductCountsByCategory = async (req, res, next) => {
       success: true,
       all: totalAll,
       byCategory: bySlug
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-// @desc    Get all categories for admin (includes disabled + subcategory + product counts)
-// @route   GET /api/admin/categories
-// @access  Private (Admin Only)
-exports.getAdminCategories = async (req, res, next) => {
-  try {
-    const SubCategory = require('../models/SubCategory');
-
-    const categories = await Category.find().sort({ createdAt: 1 }).lean();
-
-    // Attach subcategories and product counts to each category
-    const withDetails = await Promise.all(
-      categories.map(async (cat) => {
-        const subCategories = await SubCategory.find({ category: cat._id })
-          .select('_id name slug isActive')
-          .lean();
-
-        const productCount = await Product.countDocuments({ category: cat._id });
-
-        return {
-          ...cat,
-          subCategories,
-          productCount
-        };
-      })
-    );
-
-    res.status(200).json({
-      success: true,
-      count: withDetails.length,
-      categories: withDetails
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Toggle category active status
-// @route   PUT /api/admin/categories/:id/toggle
-// @access  Private (Admin Only)
-exports.toggleCategoryStatus = async (req, res, next) => {
-  try {
-    const category = await Category.findById(req.params.id);
-    if (!category) {
-      return res.status(404).json({ success: false, message: 'Category not found' });
-    }
-
-    category.isActive = !category.isActive;
-    await category.save();
-
-    res.status(200).json({
-      success: true,
-      message: `Category "${category.name}" ${category.isActive ? 'enabled' : 'disabled'}`,
-      category
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Delete category + its subcategories
-// @route   DELETE /api/admin/categories/:id
-// @access  Private (Admin Only)
-// Safety: refuses deletion if any products are assigned to this category
-exports.deleteCategory = async (req, res, next) => {
-  try {
-    const SubCategory = require('../models/SubCategory');
-
-    const category = await Category.findById(req.params.id);
-    if (!category) {
-      return res.status(404).json({ success: false, message: 'Category not found' });
-    }
-
-    // Safety guard — refuse if products are attached
-    const productCount = await Product.countDocuments({ category: category._id });
-    if (productCount > 0) {
-      return res.status(400).json({
-        success: false,
-        message: `Cannot delete "${category.name}": ${productCount} product${
-          productCount === 1 ? ' is' : 's are'
-        } assigned to it. Move or delete those products first.`
-      });
-    }
-
-    // Delete all subcategories under this category
-    const subDeleteResult = await SubCategory.deleteMany({ category: category._id });
-
-    // Delete the category itself
-    await Category.findByIdAndDelete(category._id);
-
-    res.status(200).json({
-      success: true,
-      message: `Category "${category.name}" and ${
-        subDeleteResult.deletedCount
-      } subcategor${subDeleteResult.deletedCount === 1 ? 'y' : 'ies'} deleted successfully`
     });
   } catch (error) {
     next(error);
