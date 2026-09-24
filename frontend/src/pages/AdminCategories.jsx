@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import AdminSidebar from '../components/admin/AdminSidebar';
+import ImageUploader from '../components/admin/ImageUploader';
 import { ChevronDown, ChevronRight, Package, Plus, Trash2 } from 'lucide-react';
-import api from '../services/api';
+import api, { toAbsoluteUrl } from '../services/api';
 
 export default function AdminCategories() {
   const [tree, setTree] = useState([]);
@@ -17,6 +18,10 @@ export default function AdminCategories() {
   const [l3Name, setL3Name] = useState('');
   const [l3ParentL1, setL3ParentL1] = useState('');
   const [l3ParentL2, setL3ParentL2] = useState('');
+
+  // NEW: L1 image management state
+  const [imageTargetL1, setImageTargetL1] = useState('');
+  const [savingImage, setSavingImage] = useState(false);
 
   const fetchCategories = async () => {
     setLoading(true);
@@ -99,6 +104,22 @@ export default function AdminCategories() {
     }
   };
 
+  // NEW: Save (or remove) the banner image on the currently selected L1.
+  const handleSaveImage = async (url) => {
+    if (!imageTargetL1) return;
+    setSavingImage(true);
+    setErrorMsg('');
+    try {
+      await api.put(`/categories/${imageTargetL1}`, { image: url || '' });
+      notify(url ? 'Category image saved' : 'Category image removed');
+      await fetchCategories();
+    } catch (err) {
+      setErrorMsg(err.message || 'Failed to save image');
+    } finally {
+      setSavingImage(false);
+    }
+  };
+
   const renderRow = (category, indent = 0) => (
     <React.Fragment key={category._id}>
       <tr style={{ borderBottom: '1px solid var(--border-light)', backgroundColor: category.level === 1 ? '#f8f9fa' : '#fff' }}>
@@ -107,6 +128,22 @@ export default function AdminCategories() {
             <button type="button" onClick={() => setCollapsed((prev) => ({ ...prev, [category._id]: !prev[category._id] }))} style={{ background: 'none', border: 0, cursor: 'pointer', marginRight: '0.35rem' }}>
               {collapsed[category._id] ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
             </button>
+          )}
+          {/* Show a tiny thumbnail for L1 rows so the admin can see the current image at a glance */}
+          {category.level === 1 && category.image && (
+            <img
+              src={toAbsoluteUrl(category.image)}
+              alt=""
+              style={{
+                width: '28px',
+                height: '28px',
+                objectFit: 'cover',
+                borderRadius: '4px',
+                marginRight: '0.5rem',
+                verticalAlign: 'middle',
+                border: '1px solid var(--border-light)'
+              }}
+            />
           )}
           {category.name}
         </td>
@@ -127,6 +164,9 @@ export default function AdminCategories() {
 
   const l3Options = childrenOf(l3ParentL1);
 
+  // Find the currently selected L1 node (for the image preview)
+  const selectedL1Node = tree.find((cat) => cat._id === imageTargetL1) || null;
+
   return (
     <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--bg-secondary)' }}>
       <AdminSidebar />
@@ -141,6 +181,130 @@ export default function AdminCategories() {
 
         {loading ? <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}><div className="spinner" /></div> : (
           <>
+            {/* ============================================================
+                NEW: Category Banner Image — only for Level 1 categories.
+                Pick an L1, upload/replace/remove its image.
+                This image is what customers see on the home page tiles.
+                ============================================================ */}
+            <div
+              style={{
+                backgroundColor: '#fff',
+                border: '1px solid var(--border-light)',
+                padding: '1.5rem',
+                marginBottom: '2rem',
+                boxShadow: 'var(--shadow-subtle)'
+              }}
+            >
+              <h3
+                style={{
+                  fontSize: '0.9rem',
+                  fontWeight: 700,
+                  marginBottom: '0.35rem',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em'
+                }}
+              >
+                Category Banner Image
+              </h3>
+              <p
+                style={{
+                  fontSize: '0.8rem',
+                  color: 'var(--text-muted)',
+                  marginBottom: '1.25rem',
+                  lineHeight: 1.55
+                }}
+              >
+                This image appears on the storefront home page for the selected Level 1 category.
+                Recommended: a wide 16:9 photo (e.g. 1600×900).
+              </p>
+
+              {tree.length === 0 ? (
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                  Create a Level 1 category first, then upload its banner image here.
+                </p>
+              ) : (
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'minmax(0, 260px) minmax(0, 1fr)',
+                    gap: '1.5rem',
+                    alignItems: 'start'
+                  }}
+                >
+                  {/* Dropdown */}
+                  <div>
+                    <label
+                      style={{
+                        display: 'block',
+                        fontSize: '0.7rem',
+                        fontWeight: 600,
+                        letterSpacing: '0.08em',
+                        textTransform: 'uppercase',
+                        color: 'var(--text-secondary)',
+                        marginBottom: '0.35rem'
+                      }}
+                    >
+                      Select Level 1 Category
+                    </label>
+                    <select
+                      className="form-select"
+                      value={imageTargetL1}
+                      onChange={(event) => setImageTargetL1(event.target.value)}
+                    >
+                      <option value="">Choose an L1 category...</option>
+                      {tree.map((category) => (
+                        <option key={category._id} value={category._id}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+
+                    {selectedL1Node && (
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.6rem' }}>
+                        {selectedL1Node.image ? 'Image set ✓' : 'No image yet'}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Uploader (only shown once an L1 is selected) */}
+                  <div>
+                    {!selectedL1Node ? (
+                      <div
+                        style={{
+                          border: '2px dashed var(--border-light)',
+                          borderRadius: 'var(--radius-sm)',
+                          padding: '2rem 1rem',
+                          textAlign: 'center',
+                          fontSize: '0.85rem',
+                          color: 'var(--text-muted)',
+                          backgroundColor: 'var(--bg-primary)'
+                        }}
+                      >
+                        Select a Level 1 category to upload its banner image.
+                      </div>
+                    ) : (
+                      <ImageUploader
+                        label="Banner Image"
+                        value={selectedL1Node.image || ''}
+                        onChange={handleSaveImage}
+                        type="image"
+                        hint="JPG, PNG, WEBP — max 5 MB. Recommended 1600×900."
+                      />
+                    )}
+
+                    {savingImage && (
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+                        Saving…
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* ============================================================
+                EXISTING: Three creation forms (untouched)
+                ============================================================ */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
               <Form title="Main Categories (L1)" onSubmit={(event) => createCategory(event, { name: l1Name.trim(), description: l1Description.trim() }, 'Level 1 category created', () => { setL1Name(''); setL1Description(''); })}>
                 <input className="form-input" required placeholder="Name" value={l1Name} onChange={(event) => setL1Name(event.target.value)} />
@@ -159,6 +323,10 @@ export default function AdminCategories() {
                 <button className="btn btn-primary" type="submit"><Plus size={14} /> Create L3</button>
               </Form>
             </div>
+
+            {/* ============================================================
+                EXISTING: Tree table (untouched, except tiny L1 thumbnails)
+                ============================================================ */}
             <div style={{ backgroundColor: '#fff', border: '1px solid var(--border-light)', overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                 <thead><tr><th style={{ padding: '1rem' }}>Category</th><th style={{ padding: '1rem' }}>Level</th><th style={{ padding: '1rem' }}>Products</th><th style={{ padding: '1rem', textAlign: 'right' }}>Actions</th></tr></thead>
