@@ -8,7 +8,10 @@ const {
 } = require('../controllers/categoryController');
 const { protect, requireAdmin } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
-const { categoryRules } = require('../middleware/validators');
+const {
+  categoryRules,
+  categoryUpdateRules, // ← add this
+} = require('../middleware/validators');
 
 const router = express.Router();
 
@@ -16,9 +19,9 @@ const router = express.Router();
 router.get('/', getCategories);
 router.get('/:slug', getCategoryBySlug);
 
-// Admin (uses generic create/update/delete — level is derived from `parent`)
+// Admin
 router.post('/', protect, requireAdmin, categoryRules, validate, createCategory);
-router.put('/:id', protect, requireAdmin, categoryRules, validate, updateCategory);
+router.put('/:id', protect, requireAdmin, categoryUpdateRules, validate, updateCategory); // ← changed
 router.delete('/:id', protect, requireAdmin, deleteCategory);
 
 module.exports = router;

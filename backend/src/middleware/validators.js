@@ -313,6 +313,10 @@ const resetPasswordRules = [
     .withMessage("Password must contain at least one number"),
 ];
 
+/**
+ * CREATE rules — name is required.
+ * Used on POST /categories
+ */
 const categoryRules = [
   body("name")
     .trim()
@@ -332,6 +336,39 @@ const categoryRules = [
     .isLength({ max: 2048 }),
   body("parent")
     .optional({ checkFalsy: true })
+    .isMongoId()
+    .withMessage("Parent must be a valid category id"),
+  body("isActive").optional().isBoolean().customSanitizer(Boolean),
+];
+
+/**
+ * UPDATE rules — every field is optional so you can PATCH just one field
+ * (e.g. upload/replace/remove the banner `image`).
+ * Used on PUT /categories/:id
+ *
+ * `image: ""` is allowed so the frontend can clear the image.
+ * We use `optional({ nullable: true })` (NOT checkFalsy) on purpose:
+ * we want empty strings to still reach the validator and pass.
+ */
+const categoryUpdateRules = [
+  body("name")
+    .optional()
+    .trim()
+    .notEmpty()
+    .withMessage("Category name cannot be empty")
+    .isLength({ min: 1, max: 150 })
+    .withMessage("Category name must be 1-150 characters"),
+  body("description")
+    .optional({ nullable: true })
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage("Description cannot exceed 500 characters"),
+  body("image")
+    .optional({ nullable: true })
+    .custom((v) => v === "" || (typeof v === "string" && v.length <= 2048))
+    .withMessage("Image must be a string up to 2048 characters"),
+  body("parent")
+    .optional({ nullable: true, checkFalsy: true })
     .isMongoId()
     .withMessage("Parent must be a valid category id"),
   body("isActive").optional().isBoolean().customSanitizer(Boolean),
@@ -392,6 +429,7 @@ module.exports = {
   forgotPasswordRules,
   resetPasswordRules,
   categoryRules,
+  categoryUpdateRules, 
   quantityRule,
   subscriberRules,
   createReviewRules,
