@@ -5,6 +5,7 @@ import { ShieldCheck, Truck, ArrowLeft, CheckCircle } from 'lucide-react';
 import { selectCart, clearCart } from '../store/slices/cartSlice';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
+import { trackEvent, META_EVENTS } from '../services/metaPixel';
 
 export default function CheckoutPage() {
   const dispatch = useDispatch();
@@ -47,6 +48,25 @@ export default function CheckoutPage() {
       }
     };
     loadSettings();
+  }, []);
+
+  // ===== Meta Pixel: InitiateCheckout =====
+  // Fires once when the checkout page first mounts with items in the cart.
+  // Guarded by a ref so re-renders (form typing, cart recalculations)
+  // don't re-fire it.
+  useEffect(() => {
+    if (!cart || !Array.isArray(cart.items) || cart.items.length === 0) return;
+    trackEvent(META_EVENTS.INITIATE_CHECKOUT, {
+      value: Number(cart.subtotal) || 0,
+      currency: 'PKR',
+      content_ids: cart.items.map((it) => String(it.product?._id || '')),
+      content_type: 'product',
+      num_items: cart.items.reduce(
+        (sum, it) => sum + (Number(it.quantity) || 0),
+        0
+      )
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const shippingCost = cart.subtotal >= freeShippingThreshold ? 0 : codFee;

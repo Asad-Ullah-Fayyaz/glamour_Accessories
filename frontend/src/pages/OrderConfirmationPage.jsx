@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { CheckCircle, Truck, Package, ArrowRight } from 'lucide-react';
 import api from '../services/api';
+import { trackEvent, META_EVENTS } from '../services/metaPixel';
 
 export default function OrderConfirmationPage() {
   const [searchParams] = useSearchParams();
@@ -18,8 +19,30 @@ export default function OrderConfirmationPage() {
       }
       try {
         const res = await api.get(`/orders/${orderId}`);
-        if (res.success) {
+        if (res.success && res.order) {
           setOrder(res.order);
+
+          // ===== Meta Pixel: Purchase =====
+          // Guarded by localStorage so refreshing this page does NOT
+          // fire a duplicate Purchase event for the same order.
+          const guardKey = `meta_purchase_${res.order.orderId || orderId}`;
+          if (!localStorage.getItem(guardKey)) {
+            const items = Array.isArray(res.order.items) ? res.order.items : [];
+            const totalQty = items.reduce(
+              (sum, it) => sum + (Number(it.quantity) || 0),
+              0
+            );
+            trackEvent(META_EVENTS.PURCHASE, {
+              value: Number(res.order.totalAmount) || 0,
+              currency: 'PKR',
+              content_ids: items.map((it) =>
+                String(it.product || it._id || it.name || '')
+              ),
+              content_type: 'product',
+              num_items: totalQty
+            });
+            localStorage.setItem(guardKey, '1');
+          }
         }
       } catch (err) {
         // Fallback UI handles missing order gracefully
@@ -81,7 +104,6 @@ export default function OrderConfirmationPage() {
 
                 return (
                   <div key={idx} className="order-confirm-item-block">
-                    {/* Top: thumbnail + name */}
                     <div className="order-confirm-item-top">
                       <img
                         src={
@@ -94,7 +116,6 @@ export default function OrderConfirmationPage() {
                       <span className="order-confirm-item-name">{item.name}</span>
                     </div>
 
-                    {/* Breakdown */}
                     <div className="order-confirm-item-breakdown">
                       <div className="order-confirm-price-row">
                         <span className="order-confirm-price-label">
@@ -146,7 +167,6 @@ export default function OrderConfirmationPage() {
                         <span>PKR {lineTotal.toLocaleString()}</span>
                       </div>
 
-                      {/* Rx line */}
                       {item.customization &&
                         (item.customization.description ||
                           item.customization.prescriptionImage) && (
@@ -202,7 +222,6 @@ export default function OrderConfirmationPage() {
           padding: 8rem 1.5rem;
         }
 
-        /* Header */
         .order-confirm-header {
           text-align: center;
           margin-bottom: 3rem;
@@ -223,7 +242,6 @@ export default function OrderConfirmationPage() {
           color: #444444;
         }
 
-        /* Card */
         .order-confirm-card {
           background-color: #F5F5F5;
           border: 1px solid #E0E0E0;
@@ -232,7 +250,6 @@ export default function OrderConfirmationPage() {
           margin-bottom: 2.5rem;
         }
 
-        /* Meta row */
         .order-confirm-meta {
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -267,7 +284,6 @@ export default function OrderConfirmationPage() {
           margin-top: 4px;
         }
 
-        /* Items */
         .order-confirm-items-heading {
           font-size: 0.85rem;
           text-transform: uppercase;
@@ -315,7 +331,6 @@ export default function OrderConfirmationPage() {
           min-width: 0;
         }
 
-        /* Breakdown */
         .order-confirm-item-breakdown {
           display: flex;
           flex-direction: column;
@@ -375,7 +390,6 @@ export default function OrderConfirmationPage() {
           opacity: 0.7;
         }
 
-        /* Total */
         .order-confirm-total {
           border-top: 2px solid #000000;
           padding-top: 1rem;
@@ -387,7 +401,6 @@ export default function OrderConfirmationPage() {
           color: #000000;
         }
 
-        /* Actions */
         .order-confirm-actions {
           display: flex;
           gap: 1rem;
@@ -395,7 +408,6 @@ export default function OrderConfirmationPage() {
           flex-wrap: wrap;
         }
 
-        /* === Responsive === */
         @media (max-width: 640px) {
           .order-confirm-page {
             padding: 2.5rem 1rem;

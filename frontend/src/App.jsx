@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ScrollToTop from './components/common/ScrollToTop';
+import MetaPixelTracker from './components/common/MetaPixelTracker';
 
 import Navbar from './components/common/Navbar';
 import Footer from './components/common/Footer';
@@ -94,7 +95,7 @@ function Layout({ children }) {
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Navbar />
       <CartDrawer />
-            <div style={{ flex: 1, paddingTop: '110px' }}>{children}</div>
+      <div style={{ flex: 1, paddingTop: '110px' }}>{children}</div>
       <Footer />
       <WhatsAppButton />
     </div>
@@ -106,6 +107,7 @@ export default function App() {
     <AuthProvider>
       <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <ScrollToTop />
+        <MetaPixelTracker />
         <Layout>
           <Routes>
 

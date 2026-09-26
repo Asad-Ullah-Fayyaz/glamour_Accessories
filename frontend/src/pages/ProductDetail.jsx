@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { ShoppingBag, Truck, ShieldCheck, ChevronRight, Check, MapPin, ChevronDown } from 'lucide-react';
@@ -13,6 +13,7 @@ import { useAuth } from '../context/AuthContext';
 import ProductCard from '../components/product/ProductCard';
 import ReviewSection from '../components/product/ReviewSection';
 import api from '../services/api';
+import { trackEvent, META_EVENTS } from '../services/metaPixel';
 
 export default function ProductDetail() {
   const dispatch = useDispatch();
@@ -36,6 +37,10 @@ export default function ProductDetail() {
   const [freeShippingThreshold, setFreeShippingThreshold] = useState(5000);
   const [selectedLensIdx, setSelectedLensIdx] = useState(null);
   const [customizeOpen, setCustomizeOpen] = useState(false);
+
+  // Meta Pixel: remembers the last product we fired ViewContent for,
+  // so re-renders (quantity change, image swap) don't double-fire.
+  const lastTrackedProductId = useRef(null);
 
   const formatDate = (date) =>
     date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -68,6 +73,25 @@ export default function ProductDetail() {
       setActiveImage(product.images?.[0] || '');
       setLoading(false);
     }
+  }, [product]);
+
+  // ===== Meta Pixel: ViewContent =====
+  // Fires once per product (guarded by _id). Meta uses this to build
+  // retargeting audiences and to optimise ad delivery.
+  useEffect(() => {
+    if (!product || !product._id) return;
+    if (lastTrackedProductId.current === product._id) return;
+
+    lastTrackedProductId.current = product._id;
+
+    trackEvent(META_EVENTS.VIEW_CONTENT, {
+      value: Number(product.isOnSale ? product.salePrice : product.price) || 0,
+      currency: 'PKR',
+      content_ids: [String(product._id)],
+      content_name: product.name || '',
+      content_type: 'product',
+      content_category: product.categoryPath?.l1?.name || ''
+    });
   }, [product]);
 
   useEffect(() => {

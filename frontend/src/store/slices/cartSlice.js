@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../../services/api';
+import { trackEvent, META_EVENTS } from '../../services/metaPixel';
 
 // Generate a unique ID for guest cart lines
 const generateLineId = () =>
@@ -62,6 +63,23 @@ const calculateCartTotals = (items) => {
   return { itemCount, subtotal };
 };
 
+// Helper: build Meta Pixel params from a product + quantity
+const buildAddToCartParams = (product, quantity) => ({
+  value: (getEffectivePrice(product) || 0) * (Number(quantity) || 1),
+  currency: 'PKR',
+  content_ids: [String(product._id)],
+  content_name: product.name || '',
+  content_type: 'product',
+  contents: [
+    {
+      id: String(product._id),
+      quantity: Number(quantity) || 1,
+      item_price: getEffectivePrice(product) || 0
+    }
+  ],
+  num_items: Number(quantity) || 1
+});
+
 // Async Thunks
 export const fetchCart = createAsyncThunk(
   'cart/fetchCart',
@@ -95,6 +113,10 @@ export const addToCart = createAsyncThunk(
         const res = await api.post('/cart/add', body);
         if (res.success) {
           dispatch(cartSlice.actions.setIsCartOpen(true));
+
+          // ===== Meta Pixel: AddToCart =====
+          trackEvent(META_EVENTS.ADD_TO_CART, buildAddToCartParams(product, quantity));
+
           return res.cart;
         }
         return rejectWithValue('Failed to add item to server cart');
@@ -140,6 +162,10 @@ export const addToCart = createAsyncThunk(
 
       const { itemCount, subtotal } = calculateCartTotals(updatedItems);
       dispatch(cartSlice.actions.setIsCartOpen(true));
+
+      // ===== Meta Pixel: AddToCart =====
+      trackEvent(META_EVENTS.ADD_TO_CART, buildAddToCartParams(product, quantity));
+
       return { items: updatedItems, itemCount, subtotal };
     }
   }
