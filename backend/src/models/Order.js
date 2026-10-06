@@ -74,7 +74,7 @@ const orderSchema = new mongoose.Schema({
   },
   customerEmail: {
     type: String,
-    required: true
+    // required: true
   },
   items: [orderItemSnapshotSchema],
   shippingAddress: {
@@ -94,7 +94,7 @@ const orderSchema = new mongoose.Schema({
     street: { type: String, required: true },
     city: { type: String, required: true },
     state: { type: String, default: '' },
-    postalCode: { type: String, required: false },
+    postalCode: { type: String,required : false},
     country: { type: String, default: 'Pakistan' }
   },
   paymentMethod: {

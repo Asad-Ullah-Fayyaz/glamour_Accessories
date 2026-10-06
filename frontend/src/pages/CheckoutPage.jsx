@@ -124,7 +124,7 @@ export default function CheckoutPage() {
           street: formData.street,
           city: formData.city,
           state: formData.state,
-          postalCode: formData.postalCode,
+          postalCode: formData.postalCode || '' ,
           country: formData.country
         },
         orderNotes: formData.orderNotes
@@ -208,14 +208,13 @@ export default function CheckoutPage() {
 
           <div className="form-group">
             <label className="form-label">
-              Email Address (For Confirmation &amp; Courier Tracking) *
+              Email Address (For Confirmation &amp; Courier Tracking) 
             </label>
             <input
               type="email"
               name="email"
-              value={formData.email}
+              value={formData.email || ''}
               onChange={handleChange}
-              required
               className="form-input"
               placeholder="e.g. alexander@example.com"
             />
@@ -259,13 +258,12 @@ export default function CheckoutPage() {
               />
             </div>
             <div className="form-group">
-              <label className="form-label">Postal Code *</label>
+              <label className="form-label">Postal Code </label>
               <input
                 type="text"
                 name="postalCode"
-                value={formData.postalCode}
+                value={formData.postalCode || ''}
                 onChange={handleChange}
-                required
                 className="form-input"
                 placeholder="e.g. 44000"
               />

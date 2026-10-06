@@ -43,21 +43,18 @@ exports.createOrder = async (req, res, next) => {
       !shippingAddress.fullName ||
       !shippingAddress.phone ||
       !shippingAddress.street ||
-      !shippingAddress.city ||
-      !shippingAddress.postalCode
+      !shippingAddress.city
     ) {
       return res
         .status(400)
         .json({ success: false, message: 'Complete shipping address is required' });
     }
 
-    const email = req.user?.email || customerEmail || shippingAddress?.email;
-    if (!email) {
-      return res.status(400).json({
-        success: false,
-        message: 'A valid email address is required for order confirmation'
-      });
-    }
+    // Email is now OPTIONAL.
+    // Prefer logged-in user email, then explicit customerEmail, then shippingAddress.email.
+    // If none exists, store as empty string (consistent with optional string convention).
+    const rawEmail = req.user?.email || customerEmail || shippingAddress?.email;
+    const email = rawEmail ? String(rawEmail).toLowerCase().trim() : '';
 
     // ============================================================
     // 1) Load store settings (COD toggle + fee + threshold)
@@ -208,7 +205,7 @@ exports.createOrder = async (req, res, next) => {
       order = await Order.create({
         orderId: generateOrderId(),
         customer: req.user ? req.user._id : null,
-        customerEmail: email.toLowerCase().trim(),
+        customerEmail: email, // may be '' when no email is provided
         items: orderItemSnapshots,
         shippingAddress,
         paymentMethod: 'COD',
@@ -235,14 +232,17 @@ exports.createOrder = async (req, res, next) => {
       await Cart.findOneAndUpdate({ user: req.user._id }, { items: [] });
     }
 
-    // Send confirmation email — non-blocking failure
-    try {
-      await sendOrderConfirmationEmail(order);
-    } catch (emailErr) {
-      logger.error('Order email dispatch failed:', {
-        orderId: order.orderId,
-        error: emailErr.message
-      });
+    // Send confirmation email only when an email is actually available.
+    // Non-blocking failure: order creation must not fail because of email issues.
+    if (order.customerEmail) {
+      try {
+        await sendOrderConfirmationEmail(order);
+      } catch (emailErr) {
+        logger.error('Order email dispatch failed:', {
+          orderId: order.orderId,
+          error: emailErr.message
+        });
+      }
     }
 
     return res.status(201).json({ success: true, order });
@@ -318,11 +318,13 @@ exports.trackOrderPublic = async (req, res, next) => {
 
     if (emailOrPhone) {
       const queryStr = emailOrPhone.trim().toLowerCase();
-      const emailMatches = order.customerEmail.toLowerCase() === queryStr;
+      const orderEmail = (order.customerEmail || '').toLowerCase();
+      const emailMatches = orderEmail !== '' && orderEmail === queryStr;
+
       const digitsOnly = (s) => (s || '').replace(/\D/g, '');
       const phoneMatches =
-        digitsOnly(order.shippingAddress.phone).length >= 7 &&
-        digitsOnly(order.shippingAddress.phone).endsWith(digitsOnly(queryStr).slice(-7)) &&
+        digitsOnly(order.shippingAddress?.phone).length >= 7 &&
+        digitsOnly(order.shippingAddress?.phone).endsWith(digitsOnly(queryStr).slice(-7)) &&
         digitsOnly(queryStr).length >= 7;
 
       if (!emailMatches && !phoneMatches) {

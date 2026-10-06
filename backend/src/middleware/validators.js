@@ -225,51 +225,86 @@ const createProductRules = [
   }),
 ];
 
+// ============================================================
+// SHIPPING ADDRESS RULES
+//
+// Required:  fullName, phone, street, city
+// Optional:  postalCode, state, country, email
+//
+// `postalCode` and `email` are validated ONLY when a non-empty
+// value is provided. Blank / missing values pass silently.
+// ============================================================
 const shippingAddressRules = [
   body("shippingAddress.fullName")
     .trim()
     .notEmpty()
     .withMessage("Full name is required")
-    .isLength({ max: 100 }),
+    .isLength({ max: 100 })
+    .withMessage("Full name is too long"),
+
   body("shippingAddress.phone")
     .trim()
     .notEmpty()
     .withMessage("Phone number is required")
     .matches(/^[+\d][\d\s\-()]{6,19}$/)
     .withMessage("Invalid phone number"),
+
   body("shippingAddress.street")
     .trim()
     .notEmpty()
     .withMessage("Street address is required")
-    .isLength({ max: 200 }),
+    .isLength({ max: 200 })
+    .withMessage("Street address is too long"),
+
   body("shippingAddress.city")
     .trim()
     .notEmpty()
     .withMessage("City is required")
-    .isLength({ max: 80 }),
+    .isLength({ max: 80 })
+    .withMessage("City is too long"),
+
+  // ✅ POSTAL CODE — NOW OPTIONAL
   body("shippingAddress.postalCode")
+    .optional({ checkFalsy: true })
     .trim()
-    .notEmpty()
-    .withMessage("Postal code is required")
-    .isLength({ max: 12 }),
+    .isLength({ max: 12 })
+    .withMessage("Postal code cannot exceed 12 characters"),
+
+  // ✅ EMAIL INSIDE SHIPPING ADDRESS — OPTIONAL
+  body("shippingAddress.email")
+    .optional({ checkFalsy: true })
+    .trim()
+    .isEmail()
+    .withMessage("Invalid email address")
+    .normalizeEmail(),
+
   body("shippingAddress.state")
     .optional({ checkFalsy: true })
     .trim()
     .isLength({ max: 80 }),
+
   body("shippingAddress.country")
     .optional({ checkFalsy: true })
     .trim()
     .isLength({ max: 80 }),
 ];
 
+// ============================================================
+// CREATE ORDER RULES
+//
+// `customerEmail` at the top level is now OPTIONAL.
+// It is still validated as a proper email IF provided.
+// ============================================================
 const createOrderRules = [
   body("items")
     .exists()
     .isArray({ min: 1, max: 50 })
     .withMessage("Order must contain 1-50 items"),
+
   body("items.*.productId")
     .isMongoId()
     .withMessage("Invalid product reference"),
+
   body("items.*.quantity")
     .custom((v) => Number.isInteger(Number(v)) && Number(v) >= 1)
     .withMessage("Quantity must be a whole number of at least 1")
@@ -278,6 +313,15 @@ const createOrderRules = [
       `Quantity cannot exceed ${ORDER.MAX_QTY_PER_ITEM} units per item`,
     )
     .customSanitizer((v) => Number(v)),
+
+  // ✅ CUSTOMER EMAIL (TOP-LEVEL) — NOW OPTIONAL
+  body("customerEmail")
+    .optional({ checkFalsy: true })
+    .trim()
+    .isEmail()
+    .withMessage("Invalid email address")
+    .normalizeEmail(),
+
   // NOTE: no price accepted from client — prices are computed server-side
   shippingAddressRules,
 ];
@@ -345,10 +389,6 @@ const categoryRules = [
  * UPDATE rules — every field is optional so you can PATCH just one field
  * (e.g. upload/replace/remove the banner `image`).
  * Used on PUT /categories/:id
- *
- * `image: ""` is allowed so the frontend can clear the image.
- * We use `optional({ nullable: true })` (NOT checkFalsy) on purpose:
- * we want empty strings to still reach the validator and pass.
  */
 const categoryUpdateRules = [
   body("name")
@@ -429,7 +469,7 @@ module.exports = {
   forgotPasswordRules,
   resetPasswordRules,
   categoryRules,
-  categoryUpdateRules, 
+  categoryUpdateRules,
   quantityRule,
   subscriberRules,
   createReviewRules,

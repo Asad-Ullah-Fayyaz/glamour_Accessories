@@ -4,6 +4,7 @@ const {
   getAllOrders,
   updateOrderStatus,
   assignTrackingId,
+  deleteOrder,
   getCustomers,
   getAdminProducts,
   getProductCountsByCategory,
@@ -35,6 +36,7 @@ router.get('/dashboard', getDashboardStats);
 router.get('/orders', getAllOrders);
 router.put('/orders/:id/status', updateOrderStatus);
 router.post('/orders/:id/tracking', trackingRules, validate, assignTrackingId);
+router.delete('/orders/:id', deleteOrder);
 router.get('/customers', getCustomers);
 router.get('/products/counts', getProductCountsByCategory);
 router.get('/products', getAdminProducts);

@@ -628,3 +628,47 @@ exports.deleteAdmin = async (req, res, next) => {
     next(error);
   }
 };
+
+// @desc    Delete an order by _id (restores stock if not already cancelled)
+// @route   DELETE /api/admin/orders/:id
+// @access  Private (Admin Only)
+exports.deleteOrder = async (req, res, next) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    // If the order wasn't cancelled, its items' stock was still reserved
+    // at order time — restore it before deleting. If it was already
+    // cancelled, stock was restored on the cancel transition, so skip.
+    if (order.status !== 'Cancelled') {
+      for (const item of order.items) {
+        // eslint-disable-next-line no-await-in-loop
+        await Product.findByIdAndUpdate(item.product, {
+          $inc: { stock: item.quantity }
+        });
+      }
+      logger.info('Order deleted — stock restored', {
+        orderId: order.orderId,
+        items: order.items.length,
+        admin: req.user._id
+      });
+    } else {
+      logger.info('Order deleted (already cancelled, no restock)', {
+        orderId: order.orderId,
+        admin: req.user._id
+      });
+    }
+
+    await Order.findByIdAndDelete(order._id);
+
+    res.status(200).json({
+      success: true,
+      message: `Order "${order.orderId}" deleted successfully`,
+      deletedId: order._id
+    });
+  } catch (error) {
+    next(error);
+  }
+};

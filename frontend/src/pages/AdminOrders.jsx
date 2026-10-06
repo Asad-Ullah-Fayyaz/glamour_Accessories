@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import AdminSidebar from '../components/admin/AdminSidebar';
 import CourierModal from '../components/admin/CourierModal';
-import { Truck, Eye, Filter } from 'lucide-react';
+import { Truck, Eye, Filter, Trash2 } from 'lucide-react';
 import api, { toAbsoluteUrl } from '../services/api';
 
 export default function AdminOrders() {
@@ -43,6 +43,31 @@ export default function AdminOrders() {
       }
     } catch (err) {
       setErrorMsg(err.message || 'Failed to update order status');
+    }
+  };
+
+  const handleDeleteOrder = async (order) => {
+    const confirmed = window.confirm(
+      `Delete order "${order.orderId}"?\n\n` +
+        `Customer: ${order.shippingAddress?.fullName || '—'}\n` +
+        `Total: PKR ${(order.totalAmount || 0).toLocaleString()}\n\n` +
+        (order.status !== 'Cancelled'
+          ? 'Stock for this order will be restored before deletion.\n\n'
+          : '') +
+        'This cannot be undone.'
+    );
+    if (!confirmed) return;
+
+    setErrorMsg('');
+    try {
+      const res = await api.delete(`/admin/orders/${order._id}`);
+      if (res.success) {
+        setNotification(res.message || `Order "${order.orderId}" deleted`);
+        fetchOrders();
+        setTimeout(() => setNotification(''), 3000);
+      }
+    } catch (err) {
+      setErrorMsg(err.message || 'Failed to delete order');
     }
   };
 
@@ -348,6 +373,18 @@ export default function AdminOrders() {
                             title="Edit Courier Info"
                           >
                             <Truck size={14} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteOrder(ord)}
+                            className="btn btn-secondary btn-sm"
+                            style={{
+                              padding: '0.3rem 0.5rem',
+                              color: '#c53030',
+                              borderColor: '#ffcccc'
+                            }}
+                            title="Delete Order"
+                          >
+                            <Trash2 size={14} />
                           </button>
                         </div>
                       </td>

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link, useLocation } from 'react-router-dom';
 import { CheckCircle, Truck, Package, ArrowRight } from 'lucide-react';
 import api from '../services/api';
 import { trackEvent, META_EVENTS } from '../services/metaPixel';
 
 export default function OrderConfirmationPage() {
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const orderId = searchParams.get('orderId');
 
   const [order, setOrder] = useState(null);
@@ -17,40 +18,91 @@ export default function OrderConfirmationPage() {
         setLoading(false);
         return;
       }
+
+      // 1) Prefer the order passed via navigation state from checkout.
+      //    This works for guests (no auth required) and avoids an extra API call.
+      const stateOrder =
+        location.state && location.state.order && location.state.order.orderId === orderId
+          ? location.state.order
+          : null;
+
+      if (stateOrder) {
+        setOrder(stateOrder);
+        firePurchasePixel(stateOrder);
+        setLoading(false);
+        return;
+      }
+
+      // 2) Fall back to the private endpoint (works for logged-in owners).
       try {
         const res = await api.get(`/orders/${orderId}`);
         if (res.success && res.order) {
           setOrder(res.order);
-
-          // ===== Meta Pixel: Purchase =====
-          // Guarded by localStorage so refreshing this page does NOT
-          // fire a duplicate Purchase event for the same order.
-          const guardKey = `meta_purchase_${res.order.orderId || orderId}`;
-          if (!localStorage.getItem(guardKey)) {
-            const items = Array.isArray(res.order.items) ? res.order.items : [];
-            const totalQty = items.reduce(
-              (sum, it) => sum + (Number(it.quantity) || 0),
-              0
-            );
-            trackEvent(META_EVENTS.PURCHASE, {
-              value: Number(res.order.totalAmount) || 0,
-              currency: 'PKR',
-              content_ids: items.map((it) =>
-                String(it.product || it._id || it.name || '')
-              ),
-              content_type: 'product',
-              num_items: totalQty
-            });
-            localStorage.setItem(guardKey, '1');
-          }
+          firePurchasePixel(res.order);
         }
       } catch (err) {
-        // Fallback UI handles missing order gracefully
+        // 3) Last resort: public track endpoint using phone from sessionStorage.
+        //    Checkout stores the phone number under `last_order_phone` so the
+        //    confirmation page can retrieve the order without auth.
+        try {
+          const savedPhone =
+            typeof window !== 'undefined'
+              ? sessionStorage.getItem('last_order_phone') || ''
+              : '';
+
+          const trackRes = await api.post('/orders/track', {
+            orderId,
+            emailOrPhone: savedPhone || undefined
+          });
+
+          if (trackRes.success && trackRes.tracking) {
+            // track() returns a lighter payload; still enough for the UI.
+            setOrder({
+              orderId: trackRes.tracking.orderId,
+              status: trackRes.tracking.status,
+              createdAt: trackRes.tracking.createdAt,
+              totalAmount: trackRes.tracking.totalAmount,
+              paymentMethod: trackRes.tracking.paymentMethod,
+              items: [], // not returned by public track
+              shippingAddress: { city: trackRes.tracking.cityName }
+            });
+          }
+        } catch (trackErr) {
+          // Fallback UI handles missing order gracefully.
+        }
       } finally {
         setLoading(false);
       }
     };
+
+    const firePurchasePixel = (ord) => {
+      const guardKey = `meta_purchase_${ord.orderId || orderId}`;
+      if (localStorage.getItem(guardKey)) return;
+
+      const items = Array.isArray(ord.items) ? ord.items : [];
+      const totalQty = items.reduce(
+        (sum, it) => sum + (Number(it.quantity) || 0),
+        0
+      );
+
+      trackEvent(META_EVENTS.PURCHASE, {
+        value: Number(ord.totalAmount) || 0,
+        currency: 'PKR',
+        content_ids: items
+          .map((it) => {
+            const pid = it.product || it._id;
+            return pid ? String(pid) : String(it.name || '');
+          })
+          .filter(Boolean),
+        content_type: 'product',
+        num_items: totalQty
+      });
+
+      localStorage.setItem(guardKey, '1');
+    };
+
     fetchOrderDetails();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId]);
 
   if (loading) {
@@ -60,6 +112,10 @@ export default function OrderConfirmationPage() {
       </div>
     );
   }
+
+  // Safe accessors so a missing order never throws.
+  const safeItems = Array.isArray(order?.items) ? order.items : [];
+  const safeTotal = Number(order?.totalAmount) || 0;
 
   return (
     <div className="container order-confirm-page">
@@ -91,11 +147,11 @@ export default function OrderConfirmationPage() {
           </div>
         </div>
 
-        {order && (
+        {safeItems.length > 0 && (
           <div>
             <h4 className="order-confirm-items-heading">Ordered Items</h4>
             <div className="order-confirm-items">
-              {order.items.map((item, idx) => {
+              {safeItems.map((item, idx) => {
                 const lens = item.customization && item.customization.lensOption;
                 const lensPrice = lens ? Number(lens.price) || 0 : 0;
                 const lineTotal =
@@ -132,7 +188,7 @@ export default function OrderConfirmationPage() {
                                   marginRight: '0.35rem'
                                 }}
                               >
-                                PKR {item.previousPrice.toLocaleString()}
+                                PKR {Number(item.previousPrice).toLocaleString()}
                               </span>
                               <strong>PKR {(item.price || 0).toLocaleString()}</strong>
                             </>
@@ -195,9 +251,16 @@ export default function OrderConfirmationPage() {
 
             <div className="order-confirm-total">
               <span>Total Payable upon Delivery</span>
-              <span>PKR {order.totalAmount.toLocaleString()}</span>
+              <span>PKR {safeTotal.toLocaleString()}</span>
             </div>
           </div>
+        )}
+
+        {safeItems.length === 0 && (
+          <p style={{ fontSize: '0.9rem', color: '#444', margin: 0 }}>
+            Your order has been placed successfully. You can track its status using the
+            button below.
+          </p>
         )}
       </div>
 
