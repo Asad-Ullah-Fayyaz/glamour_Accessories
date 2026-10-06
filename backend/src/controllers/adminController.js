@@ -6,6 +6,7 @@ const { ORDER } = require('../config/constants');
 const logger = require('../utils/logger');
 const Category = require('../models/Category');
 const { config } = require('../config/env');
+
 // @desc    Get admin dashboard metrics
 // @route   GET /api/admin/dashboard
 // @access  Private (Admin Only)
@@ -19,7 +20,6 @@ exports.getDashboardStats = async (req, res, next) => {
     const deliveredOrders = await Order.countDocuments({ status: 'Delivered' });
     const cancelledOrders = await Order.countDocuments({ status: 'Cancelled' });
 
-    // Calculate total revenue from delivered and valid active orders
     const revenueResult = await Order.aggregate([
       { $match: { status: { $ne: 'Cancelled' } } },
       { $group: { _id: null, totalRevenue: { $sum: '$totalAmount' } } }
@@ -111,7 +111,6 @@ exports.updateOrderStatus = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Order not found' });
     }
 
-    // Idempotency: setting the same status again is a no-op (prevents double-restock on retries)
     if (order.status === status) {
       return res.status(200).json({
         success: true,
@@ -120,7 +119,6 @@ exports.updateOrderStatus = async (req, res, next) => {
       });
     }
 
-    // Enforce valid state machine transitions — the UI cannot bypass this.
     const allowed = ORDER.VALID_TRANSITIONS[order.status] || [];
     if (!allowed.includes(status)) {
       return res.status(400).json({
@@ -129,7 +127,6 @@ exports.updateOrderStatus = async (req, res, next) => {
       });
     }
 
-    // Require tracking ID before shipping
     if (status === 'Shipped' && (!order.courierInfo || !order.courierInfo.trackingId)) {
       return res.status(400).json({
         success: false,
@@ -137,8 +134,6 @@ exports.updateOrderStatus = async (req, res, next) => {
       });
     }
 
-    // Idempotent restock: only cancel-transitioning orders restock, exactly once.
-    // The transition check above already guarantees this runs at most once per order.
     if (status === 'Cancelled') {
       for (const item of order.items) {
         // eslint-disable-next-line no-await-in-loop
@@ -204,7 +199,6 @@ exports.assignTrackingId = async (req, res, next) => {
 
     await order.save();
 
-    // Trigger tracking email only if the tracking ID is new or changed
     if (previousTrackingId !== trackingId.trim()) {
       sendTrackingEmail(order).catch((err) =>
         logger.error('Tracking email FAILED', {
@@ -226,6 +220,53 @@ exports.assignTrackingId = async (req, res, next) => {
   }
 };
 
+// ============================================================
+// NEW: Delete order (restores stock if not already cancelled)
+// @desc    Delete an order by _id
+// @route   DELETE /api/admin/orders/:id
+// @access  Private (Admin Only)
+// ============================================================
+exports.deleteOrder = async (req, res, next) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    // If the order wasn't cancelled, its items' stock was still reserved
+    // at order time — restore it before deleting. If it was already
+    // cancelled, stock was restored on the cancel transition, so skip.
+    if (order.status !== 'Cancelled') {
+      for (const item of order.items) {
+        // eslint-disable-next-line no-await-in-loop
+        await Product.findByIdAndUpdate(item.product, {
+          $inc: { stock: item.quantity }
+        });
+      }
+      logger.info('Order deleted — stock restored', {
+        orderId: order.orderId,
+        items: order.items.length,
+        admin: req.user._id
+      });
+    } else {
+      logger.info('Order deleted (already cancelled, no restock)', {
+        orderId: order.orderId,
+        admin: req.user._id
+      });
+    }
+
+    await Order.findByIdAndDelete(order._id);
+
+    res.status(200).json({
+      success: true,
+      message: `Order "${order.orderId}" deleted successfully`,
+      deletedId: order._id
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Get all customers list
 // @route   GET /api/admin/customers
 // @access  Private (Admin Only)
@@ -233,7 +274,6 @@ exports.getCustomers = async (req, res, next) => {
   try {
     const customers = await User.find({ role: 'customer' }).select('-password').sort('-createdAt');
 
-    // Attach order summary for each customer
     const customersWithOrders = await Promise.all(
       customers.map(async (cust) => {
         const orderCount = await Order.countDocuments({ customer: cust._id });
@@ -255,6 +295,7 @@ exports.getCustomers = async (req, res, next) => {
     next(error);
   }
 };
+
 // @desc    Get all products for admin (includes inactive/disabled products)
 // @route   GET /api/admin/products
 // @access  Private (Admin Only)
@@ -350,12 +391,12 @@ exports.getAdminProducts = async (req, res, next) => {
     next(error);
   }
 };
+
 // @desc    Get product counts grouped by category (for admin tabs)
 // @route   GET /api/admin/products/counts
 // @access  Private (Admin Only)
 exports.getProductCountsByCategory = async (req, res, next) => {
   try {
-    // Get every active or inactive product count per category
     const counts = await Product.aggregate([
       {
         $group: {
@@ -365,10 +406,8 @@ exports.getProductCountsByCategory = async (req, res, next) => {
       }
     ]);
 
-    // Fetch categories to map _id → slug
     const categories = await Category.find().select('_id slug name');
 
-    // Build a map keyed by slug
     const bySlug = {};
     let totalAll = 0;
 
@@ -395,6 +434,7 @@ exports.getProductCountsByCategory = async (req, res, next) => {
     next(error);
   }
 };
+
 // ============================================================
 // ADMIN MANAGEMENT (Super Admin only — guarded in routes)
 // ============================================================
@@ -425,7 +465,6 @@ exports.createAdmin = async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
 
-    // Validation
     if (!name || !email || !password) {
       return res.status(400).json({
         success: false,
@@ -442,7 +481,6 @@ exports.createAdmin = async (req, res, next) => {
 
     const normalizedEmail = String(email).toLowerCase().trim();
 
-    // Block creating an admin with the Super Admin email
     if (
       config.superAdminEmail &&
       normalizedEmail === config.superAdminEmail.toLowerCase().trim()
@@ -453,7 +491,6 @@ exports.createAdmin = async (req, res, next) => {
       });
     }
 
-    // Check for existing user
     const existing = await User.findOne({ email: normalizedEmail });
     if (existing) {
       return res.status(400).json({
@@ -462,7 +499,6 @@ exports.createAdmin = async (req, res, next) => {
       });
     }
 
-    // Create the admin — pre-save hook hashes password
     const admin = await User.create({
       name: String(name).trim(),
       email: normalizedEmail,
@@ -513,16 +549,13 @@ exports.updateAdmin = async (req, res, next) => {
       });
     }
 
-    // Update name
     if (name && String(name).trim()) {
       admin.name = String(name).trim();
     }
 
-    // Update email
     if (email) {
       const normalizedEmail = String(email).toLowerCase().trim();
 
-      // Block using Super Admin's email
       if (
         config.superAdminEmail &&
         normalizedEmail === config.superAdminEmail.toLowerCase().trim()
@@ -533,7 +566,6 @@ exports.updateAdmin = async (req, res, next) => {
         });
       }
 
-      // Check no other user has this email
       const clash = await User.findOne({
         email: normalizedEmail,
         _id: { $ne: admin._id }
@@ -548,7 +580,6 @@ exports.updateAdmin = async (req, res, next) => {
       admin.email = normalizedEmail;
     }
 
-    // Update password (pre-save hook will hash it)
     if (password) {
       if (password.length < 8) {
         return res.status(400).json({
@@ -603,7 +634,6 @@ exports.deleteAdmin = async (req, res, next) => {
       });
     }
 
-    // Safety: prevent deleting the LAST admin
     const adminCount = await User.countDocuments({ role: 'admin' });
     if (adminCount <= 1) {
       return res.status(400).json({
@@ -623,50 +653,6 @@ exports.deleteAdmin = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: `Admin "${admin.name}" deleted`
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Delete an order by _id (restores stock if not already cancelled)
-// @route   DELETE /api/admin/orders/:id
-// @access  Private (Admin Only)
-exports.deleteOrder = async (req, res, next) => {
-  try {
-    const order = await Order.findById(req.params.id);
-    if (!order) {
-      return res.status(404).json({ success: false, message: 'Order not found' });
-    }
-
-    // If the order wasn't cancelled, its items' stock was still reserved
-    // at order time — restore it before deleting. If it was already
-    // cancelled, stock was restored on the cancel transition, so skip.
-    if (order.status !== 'Cancelled') {
-      for (const item of order.items) {
-        // eslint-disable-next-line no-await-in-loop
-        await Product.findByIdAndUpdate(item.product, {
-          $inc: { stock: item.quantity }
-        });
-      }
-      logger.info('Order deleted — stock restored', {
-        orderId: order.orderId,
-        items: order.items.length,
-        admin: req.user._id
-      });
-    } else {
-      logger.info('Order deleted (already cancelled, no restock)', {
-        orderId: order.orderId,
-        admin: req.user._id
-      });
-    }
-
-    await Order.findByIdAndDelete(order._id);
-
-    res.status(200).json({
-      success: true,
-      message: `Order "${order.orderId}" deleted successfully`,
-      deletedId: order._id
     });
   } catch (error) {
     next(error);
