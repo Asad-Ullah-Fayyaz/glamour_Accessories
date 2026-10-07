@@ -76,8 +76,10 @@ export default function OrderConfirmationPage() {
     };
 
     const firePurchasePixel = (ord) => {
-      const guardKey = `meta_purchase_${ord.orderId || orderId}`;
-      if (localStorage.getItem(guardKey)) return;
+      const targetOrderId = ord.orderId || orderId;
+      if (!targetOrderId) return;
+      const guardKey = `meta_purchase_${targetOrderId}`;
+      if (typeof window !== 'undefined' && localStorage.getItem(guardKey)) return;
 
       const items = Array.isArray(ord.items) ? ord.items : [];
       const totalQty = items.reduce(
@@ -85,20 +87,26 @@ export default function OrderConfirmationPage() {
         0
       );
 
-      trackEvent(META_EVENTS.PURCHASE, {
-        value: Number(ord.totalAmount) || 0,
-        currency: 'PKR',
-        content_ids: items
-          .map((it) => {
-            const pid = it.product || it._id;
-            return pid ? String(pid) : String(it.name || '');
-          })
-          .filter(Boolean),
-        content_type: 'product',
-        num_items: totalQty
-      });
+      trackEvent(
+        META_EVENTS.PURCHASE,
+        {
+          value: Number(ord.totalAmount) || 0,
+          currency: 'PKR',
+          content_ids: items
+            .map((it) => {
+              const pid = it.product || it._id;
+              return pid ? String(pid) : String(it.name || '');
+            })
+            .filter(Boolean),
+          content_type: 'product',
+          num_items: totalQty
+        },
+        { eventID: targetOrderId }
+      );
 
-      localStorage.setItem(guardKey, '1');
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(guardKey, '1');
+      }
     };
 
     fetchOrderDetails();

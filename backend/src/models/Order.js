@@ -82,13 +82,16 @@ const orderSchema = new mongoose.Schema({
     phone: {
       type: String,
       required: [true, 'Phone number is required'],
-      // Pakistani mobile format: 11 digits, no spaces, starts with 03
       validate: {
         validator: function (v) {
           if (!v) return false;
-          return /^03\d{9}$/.test(v);
+          let cleaned = String(v).replace(/\D/g, '');
+          if (cleaned.startsWith('92') && cleaned.length === 12) {
+            cleaned = '0' + cleaned.slice(2);
+          }
+          return /^03\d{9}$/.test(cleaned);
         },
-        message: 'Phone number must be exactly 11 digits and start with 03 (e.g. 03001234567)'
+        message: 'Please enter a valid 11-digit Pakistani phone number starting with 03'
       }
     },
     street: { type: String, required: true },

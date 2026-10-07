@@ -5,7 +5,7 @@ import { ShieldCheck, Truck, ArrowLeft, CheckCircle } from 'lucide-react';
 import { selectCart, clearCart } from '../store/slices/cartSlice';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
-import { trackEvent, META_EVENTS } from '../services/metaPixel';
+import { trackEvent, META_EVENTS, getMetaCookie } from '../services/metaPixel';
 
 export default function CheckoutPage() {
   const dispatch = useDispatch();
@@ -93,6 +93,9 @@ export default function CheckoutPage() {
     setSubmitting(true);
 
     try {
+      const fbp = getMetaCookie('_fbp');
+      const fbc = getMetaCookie('_fbc');
+
       const orderPayload = {
         customerEmail: formData.email,
         items: cart.items.map((item) => {
@@ -124,17 +127,56 @@ export default function CheckoutPage() {
           street: formData.street,
           city: formData.city,
           state: formData.state,
-          postalCode: formData.postalCode || '' ,
+          postalCode: formData.postalCode || '',
           country: formData.country
         },
-        orderNotes: formData.orderNotes
+        orderNotes: formData.orderNotes,
+        fbp: fbp || undefined,
+        fbc: fbc || undefined
       };
 
       const res = await api.post('/orders', orderPayload);
 
-      if (res.success) {
+      if (res.success && res.order) {
+        const ord = res.order;
+        const items = Array.isArray(ord.items) ? ord.items : [];
+        const totalQty = items.reduce(
+          (sum, it) => sum + (Number(it.quantity) || 0),
+          0
+        );
+
+        // ===== Meta Pixel: Purchase =====
+        // Fired ONLY after the backend confirms that the order was successfully created.
+        // Uses the order ID as the eventID for Browser + CAPI deduplication.
+        trackEvent(
+          META_EVENTS.PURCHASE,
+          {
+            value: Number(ord.totalAmount) || 0,
+            currency: 'PKR',
+            content_ids: items
+              .map((it) => {
+                const pid = it.product || it._id;
+                return pid ? String(pid) : String(it.name || '');
+              })
+              .filter(Boolean),
+            content_type: 'product',
+            num_items: totalQty
+          },
+          { eventID: ord.orderId }
+        );
+
+        // Store guard in localStorage so confirmation page won't double fire
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(`meta_purchase_${ord.orderId}`, '1');
+          if (formData.phone) {
+            sessionStorage.setItem('last_order_phone', formData.phone);
+          }
+        }
+
         dispatch(clearCart());
-        navigate(`/order-confirmation?orderId=${res.order.orderId}`);
+        navigate(`/order-confirmation?orderId=${ord.orderId}`, {
+          state: { order: ord }
+        });
       }
     } catch (err) {
       setErrorMsg(err.message || 'Failed to place order. Please try again.');

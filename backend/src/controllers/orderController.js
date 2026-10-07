@@ -4,6 +4,7 @@ const Cart = require('../models/Cart');
 const SiteContent = require('../models/SiteContent');
 const generateOrderId = require('../utils/generateOrderId');
 const { sendOrderConfirmationEmail } = require('../services/emailService');
+const { sendCapiPurchaseEvent } = require('../services/metaCapiService');
 const { SHIPPING } = require('../config/constants');
 const logger = require('../utils/logger');
 const fs = require('fs');
@@ -200,6 +201,16 @@ exports.createOrder = async (req, res, next) => {
     const totalAmount = calculatedSubtotal + shippingCost;
     // ============================================================
 
+    // Sanitize phone number to standard 11-digit Pakistani format (03XXXXXXXXX)
+    let sanitizedPhone = String(shippingAddress.phone || '').trim().replace(/\D/g, '');
+    if (sanitizedPhone.startsWith('92') && sanitizedPhone.length === 12) {
+      sanitizedPhone = '0' + sanitizedPhone.slice(2);
+    }
+    const sanitizedAddress = {
+      ...shippingAddress,
+      phone: sanitizedPhone
+    };
+
     let order;
     try {
       order = await Order.create({
@@ -207,7 +218,7 @@ exports.createOrder = async (req, res, next) => {
         customer: req.user ? req.user._id : null,
         customerEmail: email, // may be '' when no email is provided
         items: orderItemSnapshots,
-        shippingAddress,
+        shippingAddress: sanitizedAddress,
         paymentMethod: 'COD',
         subtotal: calculatedSubtotal,
         shippingCost,
@@ -231,6 +242,17 @@ exports.createOrder = async (req, res, next) => {
     if (req.user) {
       await Cart.findOneAndUpdate({ user: req.user._id }, { items: [] });
     }
+
+    // Trigger Meta Conversions API (CAPI) Purchase Event asynchronously (non-blocking)
+    const { fbp, fbc } = req.body || {};
+    sendCapiPurchaseEvent({
+      order,
+      req,
+      fbp,
+      fbc
+    }).catch((capiErr) => {
+      logger.error('CAPI Purchase dispatch error:', { error: capiErr.message });
+    });
 
     // Send confirmation email only when an email is actually available.
     // Non-blocking failure: order creation must not fail because of email issues.

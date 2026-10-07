@@ -28,12 +28,19 @@ function isReady() {
  * Track a standard Meta Pixel event.
  * @param {string} eventName - One of META_EVENTS (or any valid Meta event name)
  * @param {object} [params] - value, currency, content_ids, content_name, etc.
+ * @param {object} [options] - e.g. { eventID: 'order_12345' } for CAPI deduplication
  */
-export function trackEvent(eventName, params) {
+export function trackEvent(eventName, params, options) {
   if (!isReady()) return;
   try {
     if (params && typeof params === 'object') {
-      window.fbq('track', eventName, params);
+      if (options && typeof options === 'object') {
+        window.fbq('track', eventName, params, options);
+      } else {
+        window.fbq('track', eventName, params);
+      }
+    } else if (options && typeof options === 'object') {
+      window.fbq('track', eventName, {}, options);
     } else {
       window.fbq('track', eventName);
     }
@@ -41,6 +48,15 @@ export function trackEvent(eventName, params) {
     // eslint-disable-next-line no-console
     console.warn('[MetaPixel] track failed:', err);
   }
+}
+
+/**
+ * Extract a cookie by name from document.cookie.
+ */
+export function getMetaCookie(name) {
+  if (typeof document === 'undefined') return '';
+  const match = document.cookie.match(new RegExp('(^|; )' + name + '=([^;]+)'));
+  return match ? decodeURIComponent(match[2]) : '';
 }
 
 /**
