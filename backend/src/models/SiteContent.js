@@ -46,6 +46,30 @@ const siteContentSchema = new mongoose.Schema(
           }
         ],
         default: []
+      },
+
+      // ── Global Trust Media (NEW) ──
+      // Customer screenshots, photos, and short videos that appear as a
+      // marquee carousel on EVERY product detail page.
+      // Empty array = the carousel section hides itself entirely.
+      trustMedia: {
+        type: [
+          {
+            _id: false,
+            url: { type: String, default: '', maxlength: 2048 },
+            type: {
+              type: String,
+              enum: ['image', 'video'],
+              default: 'image'
+            },
+            caption: { type: String, default: '', maxlength: 200 },
+            customerName: { type: String, default: '', maxlength: 50 },
+            city: { type: String, default: '', maxlength: 50 },
+            rating: { type: Number, min: 1, max: 5, default: undefined },
+            addedAt: { type: Date, default: Date.now }
+          }
+        ],
+        default: []
       }
     },
 
@@ -68,23 +92,20 @@ const siteContentSchema = new mongoose.Schema(
       },
       overlayOpacity: {
         type: Number,
-        default: 0.9,     // 0 = fully transparent overlay (full image), 1 = fully white (image hidden)
+        default: 0.9,
         min: 0,
         max: 1
       },
 
       // ── Hero media slideshow ──
-      // Multiple slide images. Empty array = fall back to backgroundImage.
       images: {
         type: [String],
         default: []
       },
-      // One optional hero video URL. Empty string = no video.
       video: {
         type: String,
         default: ''
       },
-      // Seconds each image stays on screen before advancing.
       slideInterval: {
         type: Number,
         default: 4.5,

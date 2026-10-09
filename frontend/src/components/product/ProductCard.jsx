@@ -18,6 +18,15 @@ export default function ProductCard({ product }) {
   const isOutOfStock = product.stock <= 0;
   const isLowStock = product.stock > 0 && product.stock <= 5;
   const onSale = product.isOnSale === true;
+  const isNew = product.newIs === true; // ← fixed: was `product.isNew`
+
+  // Compute discount % only when the numbers are valid and meaningful.
+  const price = Number(product.price) || 0;
+  const salePrice = Number(product.salePrice) || 0;
+  const discountPct =
+    onSale && price > 0 && salePrice > 0 && salePrice < price
+      ? Math.round(((price - salePrice) / price) * 100)
+      : 0;
 
   const handleAddToCart = (e) => {
     e.preventDefault();
@@ -42,7 +51,7 @@ export default function ProductCard({ product }) {
             loading="lazy"
           />
 
-          {/* Badges Overlay */}
+          {/* Badges Overlay — top left */}
           <div
             style={{
               position: 'absolute',
@@ -55,25 +64,37 @@ export default function ProductCard({ product }) {
               zIndex: 2
             }}
           >
-            {product.isFeatured && <span className="badge badge-gold">Featured</span>}
-            {product.isNew === true && <span className="badge badge-new">New</span>}
-            {onSale && <span className="badge badge-dark">Sale</span>}
+            {product.isFeatured && (
+              <span className="badge badge-gold">Featured</span>
+            )}
+            {isNew && <span className="badge badge-new">New</span>}
+            {onSale && discountPct > 0 && (
+              <span className="badge badge-dark">-{discountPct}%</span>
+            )}
+            {onSale && discountPct === 0 && (
+              <span className="badge badge-dark">Sale</span>
+            )}
             {isOutOfStock && (
               <span
                 className="badge"
-                style={{ backgroundColor: 'var(--bg-card)', color: 'var(--bg-dark)' }}
+                style={{
+                  backgroundColor: 'var(--bg-card)',
+                  color: 'var(--bg-dark)'
+                }}
               >
                 Sold out
               </span>
             )}
-            {isLowStock && (
-              <span className="badge badge-warning">Low Stock ({product.stock})</span>
+            {isLowStock && !isOutOfStock && (
+              <span className="badge badge-warning">
+                Only {product.stock} left
+              </span>
             )}
           </div>
         </div>
       </Link>
 
-      <div style={{ padding: '1rem 1rem 1.25rem' }}>
+      <div style={{ padding: '1rem 1rem 1.25rem', display: 'flex', flexDirection: 'column', flex: 1 }}>
         {/* Category tag */}
         <p
           style={{
@@ -114,16 +135,18 @@ export default function ProductCard({ product }) {
             alignItems: 'flex-end',
             justifyContent: 'space-between',
             gap: '0.5rem',
-            marginTop: '0.5rem',
+            marginTop: 'auto',
+            paddingTop: '0.5rem',
             flexWrap: 'wrap'
           }}
         >
+          {/* Price block */}
           <span
             style={{
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'flex-start',
-              gap: '0.15rem',
+              gap: '0.1rem',
               minWidth: 0,
               flex: '1 1 auto',
               overflow: 'hidden'
@@ -132,33 +155,35 @@ export default function ProductCard({ product }) {
             {onSale && (
               <span
                 style={{
-                  fontSize: '0.75rem',
+                  fontSize: '0.72rem',
                   fontWeight: 500,
                   color: 'var(--text-muted)',
                   textDecoration: 'line-through',
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
-                  maxWidth: '100%'
+                  maxWidth: '100%',
+                  lineHeight: 1.2
                 }}
               >
-                PKR {product.price?.toLocaleString() ?? '0'}
+                PKR {price.toLocaleString()}
               </span>
             )}
             <span
               style={{
-                fontSize: '0.95rem',
+                fontSize: '1rem',
                 fontWeight: 700,
-                color: 'var(--text-primary)',
+                color: onSale ? '#C5221F' : 'var(--text-primary)',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
-                maxWidth: '100%'
+                maxWidth: '100%',
+                lineHeight: 1.2
               }}
             >
               {onSale
-                ? `PKR ${product.salePrice?.toLocaleString() ?? '0'}`
-                : `PKR ${product.price?.toLocaleString() ?? '0'}`}
+                ? `PKR ${salePrice.toLocaleString()}`
+                : `PKR ${price.toLocaleString()}`}
             </span>
           </span>
 

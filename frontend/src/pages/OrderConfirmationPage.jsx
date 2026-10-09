@@ -1,6 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link, useLocation } from 'react-router-dom';
-import { CheckCircle, Truck, Package, ArrowRight } from 'lucide-react';
+import {
+  CheckCircle,
+  Truck,
+  Package,
+  ArrowRight,
+  PackageCheck,
+  MessageCircle,
+  Headphones,
+  Sparkles
+} from 'lucide-react';
 import api from '../services/api';
 import { trackEvent, META_EVENTS } from '../services/metaPixel';
 
@@ -20,9 +29,10 @@ export default function OrderConfirmationPage() {
       }
 
       // 1) Prefer the order passed via navigation state from checkout.
-      //    This works for guests (no auth required) and avoids an extra API call.
       const stateOrder =
-        location.state && location.state.order && location.state.order.orderId === orderId
+        location.state &&
+        location.state.order &&
+        location.state.order.orderId === orderId
           ? location.state.order
           : null;
 
@@ -33,7 +43,7 @@ export default function OrderConfirmationPage() {
         return;
       }
 
-      // 2) Fall back to the private endpoint (works for logged-in owners).
+      // 2) Fall back to the private endpoint.
       try {
         const res = await api.get(`/orders/${orderId}`);
         if (res.success && res.order) {
@@ -42,8 +52,6 @@ export default function OrderConfirmationPage() {
         }
       } catch (err) {
         // 3) Last resort: public track endpoint using phone from sessionStorage.
-        //    Checkout stores the phone number under `last_order_phone` so the
-        //    confirmation page can retrieve the order without auth.
         try {
           const savedPhone =
             typeof window !== 'undefined'
@@ -56,14 +64,13 @@ export default function OrderConfirmationPage() {
           });
 
           if (trackRes.success && trackRes.tracking) {
-            // track() returns a lighter payload; still enough for the UI.
             setOrder({
               orderId: trackRes.tracking.orderId,
               status: trackRes.tracking.status,
               createdAt: trackRes.tracking.createdAt,
               totalAmount: trackRes.tracking.totalAmount,
               paymentMethod: trackRes.tracking.paymentMethod,
-              items: [], // not returned by public track
+              items: [],
               shippingAddress: { city: trackRes.tracking.cityName }
             });
           }
@@ -79,7 +86,8 @@ export default function OrderConfirmationPage() {
       const targetOrderId = ord.orderId || orderId;
       if (!targetOrderId) return;
       const guardKey = `meta_purchase_${targetOrderId}`;
-      if (typeof window !== 'undefined' && localStorage.getItem(guardKey)) return;
+      if (typeof window !== 'undefined' && localStorage.getItem(guardKey))
+        return;
 
       const items = Array.isArray(ord.items) ? ord.items : [];
       const totalQty = items.reduce(
@@ -121,20 +129,63 @@ export default function OrderConfirmationPage() {
     );
   }
 
-  // Safe accessors so a missing order never throws.
+  // Safe accessors
   const safeItems = Array.isArray(order?.items) ? order.items : [];
   const safeTotal = Number(order?.totalAmount) || 0;
 
+  // Detect if the order contains any customizable / prescription item.
+  const hasCustomization = safeItems.some(
+    (item) =>
+      item.customization &&
+      (item.customization.description ||
+        item.customization.prescriptionImage ||
+        item.customization.lensOption)
+  );
+
   return (
     <div className="container order-confirm-page">
+      {/* ============ HEADER ============ */}
       <div className="order-confirm-header">
         <CheckCircle size={64} className="order-confirm-icon" />
         <h1 className="order-confirm-title">Order Confirmed</h1>
         <p className="order-confirm-subtitle">
-          Thank you for choosing Glamour Accessories. Your Cash on Delivery order has been logged.
+          Thank you for choosing Glamour Accessories. Your Cash on Delivery
+          order has been logged.
         </p>
       </div>
 
+      {/* ============ CUSTOM ORDER NOTICE ============ */}
+      {hasCustomization && (
+        <div
+          style={{
+            display: 'flex',
+            gap: '0.75rem',
+            alignItems: 'flex-start',
+            padding: '1rem 1.25rem',
+            marginBottom: '2rem',
+            backgroundColor: '#FFF8E1',
+            border: '1px solid #F5D87D',
+            borderLeft: '4px solid #C5A059',
+            borderRadius: 'var(--radius-sm)'
+          }}
+        >
+          <Sparkles
+            size={18}
+            style={{ color: '#C5A059', flexShrink: 0, marginTop: 2 }}
+          />
+          <div style={{ fontSize: '0.85rem', color: '#5C4308', lineHeight: 1.6 }}>
+            <strong style={{ display: 'block', marginBottom: '0.2rem' }}>
+              Custom Order Confirmed
+            </strong>
+            This order contains a customized item. Our team will contact you on{' '}
+            <strong>WhatsApp within 24 hours</strong> to confirm your
+            prescription details before we begin crafting. Keep your phone
+            accessible.
+          </div>
+        </div>
+      )}
+
+      {/* ============ ORDER CARD ============ */}
       <div className="order-confirm-card">
         <div className="order-confirm-meta">
           <div className="order-confirm-meta-item">
@@ -160,7 +211,8 @@ export default function OrderConfirmationPage() {
             <h4 className="order-confirm-items-heading">Ordered Items</h4>
             <div className="order-confirm-items">
               {safeItems.map((item, idx) => {
-                const lens = item.customization && item.customization.lensOption;
+                const lens =
+                  item.customization && item.customization.lensOption;
                 const lensPrice = lens ? Number(lens.price) || 0 : 0;
                 const lineTotal =
                   (item.price || 0) * (item.quantity || 0) +
@@ -177,7 +229,9 @@ export default function OrderConfirmationPage() {
                         alt={item.name}
                         className="order-confirm-item-img"
                       />
-                      <span className="order-confirm-item-name">{item.name}</span>
+                      <span className="order-confirm-item-name">
+                        {item.name}
+                      </span>
                     </div>
 
                     <div className="order-confirm-item-breakdown">
@@ -198,7 +252,9 @@ export default function OrderConfirmationPage() {
                               >
                                 PKR {Number(item.previousPrice).toLocaleString()}
                               </span>
-                              <strong>PKR {(item.price || 0).toLocaleString()}</strong>
+                              <strong>
+                                PKR {(item.price || 0).toLocaleString()}
+                              </strong>
                             </>
                           ) : (
                             `PKR ${(item.price || 0).toLocaleString()}`
@@ -220,7 +276,9 @@ export default function OrderConfirmationPage() {
                       )}
 
                       <div className="order-confirm-price-row">
-                        <span className="order-confirm-price-label">Quantity</span>
+                        <span className="order-confirm-price-label">
+                          Quantity
+                        </span>
                         <span className="order-confirm-price-value">
                           {item.quantity}
                         </span>
@@ -237,7 +295,8 @@ export default function OrderConfirmationPage() {
                           <div className="order-confirm-rx">
                             <div>
                               <strong>Rx:</strong>{' '}
-                              {item.customization.description || '(image only)'}
+                              {item.customization.description ||
+                                '(image only)'}
                             </div>
                             {item.customization.prescriptionImage && (
                               <a
@@ -266,14 +325,80 @@ export default function OrderConfirmationPage() {
 
         {safeItems.length === 0 && (
           <p style={{ fontSize: '0.9rem', color: '#444', margin: 0 }}>
-            Your order has been placed successfully. You can track its status using the
-            button below.
+            Your order has been placed successfully. You can track its status
+            using the button below.
           </p>
         )}
       </div>
 
+      {/* ============ NEW: WHAT'S NEXT TIMELINE ============ */}
+      <div className="order-confirm-next">
+        <h3 className="order-confirm-next-title">What Happens Next</h3>
+        <ol className="order-confirm-timeline">
+          <TimelineStep
+            number={1}
+            title="Order Received"
+            text="Your order is now in our system. We have your details on file."
+            isDone
+          />
+          <TimelineStep
+            number={2}
+            title="Confirmation Call"
+            text="Our team will call or WhatsApp you to confirm your order and address."
+            isActive
+          />
+          <TimelineStep
+            number={3}
+            title="Dispatched"
+            text="Your parcel is handed to our courier partner. You'll receive a tracking ID by email."
+          />
+          <TimelineStep
+            number={4}
+            title="Delivery & Payment"
+            text="Inspect your parcel, then pay cash to the courier agent upon delivery."
+          />
+        </ol>
+      </div>
+
+      {/* ============ NEW: SUPPORT BLOCK ============ */}
+      <div className="order-confirm-support">
+        <div className="order-confirm-support-left">
+          <Headphones
+            size={22}
+            style={{ color: '#000000', flexShrink: 0, marginTop: 2 }}
+          />
+          <div>
+            <strong
+              style={{
+                display: 'block',
+                fontSize: '0.9rem',
+                color: '#000000',
+                marginBottom: '0.15rem'
+              }}
+            >
+              Need Help With Your Order?
+            </strong>
+            <span style={{ fontSize: '0.8rem', color: '#444444', lineHeight: 1.5 }}>
+              Message us on WhatsApp with your Order Reference — we typically
+              reply within a few hours during business hours.
+            </span>
+          </div>
+        </div>
+        <Link
+          to="/track-order"
+          className="btn btn-secondary btn-sm"
+          style={{ whiteSpace: 'nowrap' }}
+        >
+          <MessageCircle size={14} /> Contact Support
+        </Link>
+      </div>
+
+      {/* ============ ACTIONS ============ */}
       <div className="order-confirm-actions">
-        <Link to={`/track-order?orderId=${orderId}`} className="btn btn-primary">
+        <Link
+          to={`/track-order?orderId=${orderId}`}
+          className="btn btn-primary"
+        >
           Track Order Status <ArrowRight size={16} />
         </Link>
         <Link to="/products" className="btn btn-secondary">
@@ -318,7 +443,7 @@ export default function OrderConfirmationPage() {
           border: 1px solid #E0E0E0;
           border-top: 3px solid #000000;
           padding: 2rem;
-          margin-bottom: 2.5rem;
+          margin-bottom: 2rem;
         }
 
         .order-confirm-meta {
@@ -472,6 +597,50 @@ export default function OrderConfirmationPage() {
           color: #000000;
         }
 
+        /* ============ WHAT'S NEXT TIMELINE ============ */
+        .order-confirm-next {
+          background-color: #FAFAFA;
+          border: 1px solid #E0E0E0;
+          padding: 1.75rem;
+          margin-bottom: 2rem;
+        }
+        .order-confirm-next-title {
+          font-family: var(--font-serif);
+          font-size: 1.15rem;
+          font-weight: 400;
+          color: #000000;
+          margin: 0 0 1.25rem 0;
+        }
+        .order-confirm-timeline {
+          list-style: none;
+          padding: 0;
+          margin: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 1.25rem;
+        }
+
+        /* ============ SUPPORT BLOCK ============ */
+        .order-confirm-support {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 1rem;
+          flex-wrap: wrap;
+          padding: 1.25rem 1.5rem;
+          background-color: #F5F5F5;
+          border: 1px solid #E0E0E0;
+          border-left: 3px solid #000000;
+          margin-bottom: 2rem;
+        }
+        .order-confirm-support-left {
+          display: flex;
+          gap: 0.75rem;
+          align-items: flex-start;
+          min-width: 0;
+          flex: 1 1 320px;
+        }
+
         .order-confirm-actions {
           display: flex;
           gap: 1rem;
@@ -479,6 +648,7 @@ export default function OrderConfirmationPage() {
           flex-wrap: wrap;
         }
 
+        /* ============ RESPONSIVE ============ */
         @media (max-width: 640px) {
           .order-confirm-page {
             padding: 2.5rem 1rem;
@@ -521,6 +691,14 @@ export default function OrderConfirmationPage() {
             font-size: 1rem;
             gap: 0.35rem;
           }
+          .order-confirm-next {
+            padding: 1.25rem;
+          }
+          .order-confirm-support {
+            flex-direction: column;
+            align-items: stretch;
+            padding: 1rem;
+          }
           .order-confirm-actions {
             flex-direction: column;
             align-items: stretch;
@@ -553,5 +731,54 @@ export default function OrderConfirmationPage() {
         }
       `}</style>
     </div>
+  );
+}
+
+/* --------------------------------------------------------------------- */
+/* Small helper — one step in the "What Happens Next" timeline           */
+/* --------------------------------------------------------------------- */
+function TimelineStep({ number, title, text, isDone, isActive }) {
+  const circleBg = isDone ? '#000000' : isActive ? '#C5A059' : '#FFFFFF';
+  const circleColor = isDone || isActive ? '#FFFFFF' : '#767676';
+  const circleBorder = isDone || isActive ? 'none' : '1px solid #CCCCCC';
+  const titleColor = isDone || isActive ? '#000000' : '#767676';
+
+  return (
+    <li style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+      <span
+        style={{
+          flexShrink: 0,
+          width: 32,
+          height: 32,
+          borderRadius: '50%',
+          background: circleBg,
+          color: circleColor,
+          border: circleBorder,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontWeight: 700,
+          fontSize: '0.85rem',
+          lineHeight: 1
+        }}
+      >
+        {isDone ? <PackageCheck size={16} /> : number}
+      </span>
+      <div style={{ minWidth: 0 }}>
+        <div
+          style={{
+            fontSize: '0.9rem',
+            fontWeight: 700,
+            color: titleColor,
+            marginBottom: '0.2rem'
+          }}
+        >
+          {title}
+        </div>
+        <div style={{ fontSize: '0.8rem', color: '#767676', lineHeight: 1.55 }}>
+          {text}
+        </div>
+      </div>
+    </li>
   );
 }

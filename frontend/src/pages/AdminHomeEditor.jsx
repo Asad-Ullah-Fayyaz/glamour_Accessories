@@ -1,6 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Save, Plus, Trash2, ChevronUp, ChevronDown, Video, ImagePlus } from 'lucide-react';
+import {
+  Save,
+  Plus,
+  Trash2,
+  ChevronUp,
+  ChevronDown,
+  Video,
+  ImagePlus,
+  Star,
+  MessageCircle
+} from 'lucide-react';
 import api, { toAbsoluteUrl } from '../services/api';
 import ImageUploader from '../components/admin/ImageUploader';
 import AdminSidebar from '../components/admin/AdminSidebar';
@@ -11,6 +21,7 @@ export default function AdminHomeEditor() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [trustUploading, setTrustUploading] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -18,15 +29,18 @@ export default function AdminHomeEditor() {
         const res = await api.get('/site-content/homepage');
         if (res.success) {
           const loaded = res.content;
-          // Backward compatibility: older content only ever had a single
-          // hero.backgroundImage. If no slide images have been set up yet,
-          // seed the new images[] array with it so nothing disappears.
+          // Backward compat: seed hero.images from backgroundImage if empty.
           if (
             loaded?.hero &&
             (!loaded.hero.images || loaded.hero.images.length === 0) &&
             loaded.hero.backgroundImage
           ) {
             loaded.hero = { ...loaded.hero, images: [loaded.hero.backgroundImage] };
+          }
+          // Backward compat: ensure store.trustMedia is an array.
+          if (!loaded.store) loaded.store = {};
+          if (!Array.isArray(loaded.store.trustMedia)) {
+            loaded.store.trustMedia = [];
           }
           setContent(loaded);
         }
@@ -50,7 +64,6 @@ export default function AdminHomeEditor() {
   };
 
   // ---- Hero slide image helpers ----
-
   const addHeroImage = () => {
     setContent((prev) => ({
       ...prev,
@@ -105,6 +118,97 @@ export default function AdminHomeEditor() {
     setContent((prev) => ({
       ...prev,
       hero: { ...prev.hero, video: '', images: [] }
+    }));
+  };
+
+  // =================================================================
+  // GLOBAL TRUST MEDIA HELPERS
+  // =================================================================
+
+  // Upload one or more files (images or videos) and append them as
+  // trust media entries. Uses the existing /site-content/homepage/upload
+  // endpoint (already wired to Cloudinary).
+  const handleTrustUpload = async (e) => {
+    const files = e.target.files;
+    if (!files?.length) return;
+
+    setTrustUploading(true);
+    try {
+      const newItems = [];
+
+      for (const file of Array.from(files)) {
+        const formData = new FormData();
+        formData.append('image', file); // backend field name is 'image'
+        // eslint-disable-next-line no-await-in-loop
+        const res = await api.post('/site-content/homepage/upload', formData);
+        if (res.success && res.url) {
+          newItems.push({
+            url: res.url,
+            type: file.type.startsWith('video/') ? 'video' : 'image',
+            caption: '',
+            customerName: '',
+            city: '',
+            rating: undefined
+          });
+        }
+      }
+
+      if (newItems.length > 0) {
+        setContent((prev) => ({
+          ...prev,
+          store: {
+            ...prev.store,
+            trustMedia: [...(prev.store?.trustMedia || []), ...newItems]
+          }
+        }));
+      }
+    } catch (err) {
+      setMessage(err.message || 'Trust media upload failed');
+    } finally {
+      setTrustUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const updateTrustItem = (idx, patch) => {
+    setContent((prev) => {
+      const next = [...(prev.store?.trustMedia || [])];
+      next[idx] = { ...next[idx], ...patch };
+      return { ...prev, store: { ...prev.store, trustMedia: next } };
+    });
+  };
+
+  const removeTrustItem = (idx) => {
+    setContent((prev) => ({
+      ...prev,
+      store: {
+        ...prev.store,
+        trustMedia: (prev.store?.trustMedia || []).filter((_, i) => i !== idx)
+      }
+    }));
+  };
+
+  const moveTrustItem = (idx, dir) => {
+    setContent((prev) => {
+      const next = [...(prev.store?.trustMedia || [])];
+      const target = idx + dir;
+      if (target < 0 || target >= next.length) return prev;
+      [next[idx], next[target]] = [next[target], next[idx]];
+      return { ...prev, store: { ...prev.store, trustMedia: next } };
+    });
+  };
+
+  const removeAllTrustItems = () => {
+    if (
+      !window.confirm(
+        'Remove ALL global trust reviews? They will disappear from every product page.'
+      )
+    ) {
+      return;
+    }
+    setContent((prev) => ({
+      ...prev,
+      store: { ...prev.store, trustMedia: [] }
     }));
   };
 
@@ -163,6 +267,8 @@ export default function AdminHomeEditor() {
     return 'No hero media configured.';
   })();
 
+  const trustMedia = content.store?.trustMedia || [];
+
   return (
     <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--bg-secondary)' }}>
       <AdminSidebar />
@@ -207,6 +313,278 @@ export default function AdminHomeEditor() {
             </button>
           </div>
         </div>
+
+        {/* ============================================================
+            GLOBAL TRUST REVIEWS
+            Shown on every product detail page. Upload WhatsApp
+            screenshots, unboxing photos, or short customer videos.
+           ============================================================ */}
+        <Section title="Global Trust Reviews (Shown on Every Product)">
+          <p
+            style={{
+              fontSize: '0.8rem',
+              color: 'var(--text-secondary)',
+              lineHeight: 1.6,
+              margin: 0
+            }}
+          >
+            These customer screenshots, photos, and videos appear as a{' '}
+            <strong>marquee carousel</strong> on <strong>every product detail page</strong>{' '}
+            — regardless of which product the customer is viewing. Manage them here once
+            and they&apos;re global. Upload WhatsApp chats, Instagram DMs, unboxings, or short
+            customer videos.
+          </p>
+
+          {/* Upload row */}
+          <div
+            style={{
+              display: 'flex',
+              gap: '0.75rem',
+              flexWrap: 'wrap',
+              alignItems: 'center'
+            }}
+          >
+            <label
+              className="btn btn-primary"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                cursor: trustUploading ? 'wait' : 'pointer',
+                opacity: trustUploading ? 0.6 : 1
+              }}
+            >
+              <ImagePlus size={14} />{' '}
+              {trustUploading ? 'Uploading…' : 'Upload Images or Videos'}
+              <input
+                type="file"
+                multiple
+                accept="image/*,video/*"
+                onChange={handleTrustUpload}
+                disabled={trustUploading}
+                style={{ display: 'none' }}
+              />
+            </label>
+
+            {trustMedia.length > 0 && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  color: '#C5221F',
+                  borderColor: '#C5221F'
+                }}
+                onClick={removeAllTrustItems}
+              >
+                <Trash2 size={14} /> Remove All
+              </button>
+            )}
+
+            <span
+              style={{
+                fontSize: '0.75rem',
+                color: 'var(--text-muted)'
+              }}
+            >
+              {trustMedia.length}{' '}
+              {trustMedia.length === 1 ? 'item' : 'items'} · Images &amp; videos (max 50 MB each)
+            </span>
+          </div>
+
+          {/* Item list */}
+          {trustMedia.length === 0 ? (
+            <div
+              style={{
+                border: '1px dashed var(--border-light)',
+                borderRadius: 'var(--radius-sm)',
+                padding: '2rem 1rem',
+                textAlign: 'center',
+                fontSize: '0.85rem',
+                color: 'var(--text-muted)'
+              }}
+            >
+              <MessageCircle
+                size={26}
+                style={{ marginBottom: '0.5rem', opacity: 0.5 }}
+              />
+              <div>No trust reviews yet. Upload images or videos above.</div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {trustMedia.map((item, idx) => (
+                <div
+                  key={`${item.url}-${idx}`}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '110px 1fr',
+                    gap: '1rem',
+                    padding: '1rem',
+                    border: '1px solid var(--border-light)',
+                    backgroundColor: 'var(--bg-primary)',
+                    borderRadius: 'var(--radius-sm)'
+                  }}
+                >
+                  {/* Preview */}
+                  <div
+                    style={{
+                      position: 'relative',
+                      width: 110,
+                      height: 140,
+                      backgroundColor: '#EDEDED',
+                      border: '1px solid #E0E0E0',
+                      overflow: 'hidden'
+                    }}
+                  >
+                    {item.type === 'video' ? (
+                      <video
+                        src={toAbsoluteUrl(item.url)}
+                        muted
+                        playsInline
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    ) : (
+                      <img
+                        src={toAbsoluteUrl(item.url)}
+                        alt={`Trust ${idx + 1}`}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    )}
+                    <span
+                      className="badge badge-dark"
+                      style={{
+                        position: 'absolute',
+                        top: 4,
+                        left: 4,
+                        fontSize: '0.55rem',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '2px',
+                        padding: '2px 5px'
+                      }}
+                    >
+                      {item.type === 'video' ? <Video size={9} /> : <ImagePlus size={9} />}
+                      {item.type}
+                    </span>
+                  </div>
+
+                  {/* Fields */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', minWidth: 0 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="Customer name (e.g. Ayesha)"
+                        value={item.customerName || ''}
+                        onChange={(e) => updateTrustItem(idx, { customerName: e.target.value })}
+                        maxLength={50}
+                      />
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="City (e.g. Lahore)"
+                        value={item.city || ''}
+                        onChange={(e) => updateTrustItem(idx, { city: e.target.value })}
+                        maxLength={50}
+                      />
+                    </div>
+
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="Short caption (e.g. Loved the quality!)"
+                      value={item.caption || ''}
+                      onChange={(e) => updateTrustItem(idx, { caption: e.target.value })}
+                      maxLength={200}
+                    />
+
+                    {/* Star rating */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                        Rating:
+                      </span>
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() =>
+                            updateTrustItem(idx, {
+                              rating: item.rating === n ? undefined : n
+                            })
+                          }
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: 2
+                          }}
+                          aria-label={`${n} star`}
+                        >
+                          <Star
+                            size={16}
+                            fill={item.rating && n <= item.rating ? '#C5A059' : 'none'}
+                            color={item.rating && n <= item.rating ? '#C5A059' : '#ccc'}
+                          />
+                        </button>
+                      ))}
+                      {item.rating && (
+                        <button
+                          type="button"
+                          onClick={() => updateTrustItem(idx, { rating: undefined })}
+                          style={{
+                            fontSize: '0.7rem',
+                            color: 'var(--text-muted)',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            textDecoration: 'underline'
+                          }}
+                        >
+                          clear
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Move + Delete */}
+                    <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.25rem' }}>
+                      <button
+                        type="button"
+                        onClick={() => moveTrustItem(idx, -1)}
+                        disabled={idx === 0}
+                        className="btn btn-secondary btn-sm"
+                        style={{ opacity: idx === 0 ? 0.4 : 1 }}
+                        aria-label="Move up"
+                      >
+                        <ChevronUp size={13} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveTrustItem(idx, 1)}
+                        disabled={idx === trustMedia.length - 1}
+                        className="btn btn-secondary btn-sm"
+                        style={{ opacity: idx === trustMedia.length - 1 ? 0.4 : 1 }}
+                        aria-label="Move down"
+                      >
+                        <ChevronDown size={13} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeTrustItem(idx)}
+                        className="btn btn-secondary btn-sm"
+                        style={{ color: '#C5221F', borderColor: '#ffcccc' }}
+                        aria-label="Remove"
+                      >
+                        <Trash2 size={13} /> Remove
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Section>
 
         {/* Announcement Bar */}
         <Section title="Announcement Bar">
@@ -263,7 +641,6 @@ export default function AdminHomeEditor() {
             />
           </Field>
 
-          {/* Status hint */}
           <div
             style={{
               padding: '0.75rem 1rem',
@@ -279,7 +656,6 @@ export default function AdminHomeEditor() {
             {heroSummary}
           </div>
 
-          {/* --- Hero Video --- */}
           <Field label="Hero Video (optional)">
             <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.6rem', lineHeight: 1.5 }}>
               If a video is set, it always plays first on page load. Once it finishes, the slide
@@ -304,7 +680,6 @@ export default function AdminHomeEditor() {
             )}
           </Field>
 
-          {/* --- Hero Slide Images --- */}
           <Field label="Hero Slide Images">
             <div
               style={{
@@ -436,7 +811,6 @@ export default function AdminHomeEditor() {
             )}
           </Field>
 
-          {/* --- Slide timing + overlay --- */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <Field label="Seconds Per Image Slide">
               <input
@@ -480,7 +854,6 @@ export default function AdminHomeEditor() {
             </Field>
           </div>
 
-          {/* Legacy background image — kept as a fallback */}
           <Field label="Background Image (fallback)">
             <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.5rem', lineHeight: 1.5 }}>
               Used only when no slide images above are set. Ignored otherwise.
@@ -492,7 +865,6 @@ export default function AdminHomeEditor() {
             />
           </Field>
 
-          {/* Danger zone */}
           {(hasVideo || hasImages) && (
             <div
               style={{
@@ -524,7 +896,6 @@ export default function AdminHomeEditor() {
             </div>
           )}
 
-          {/* Buttons */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <Field label="Primary Button Text">
               <input

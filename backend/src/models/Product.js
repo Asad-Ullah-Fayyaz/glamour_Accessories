@@ -97,6 +97,71 @@ const productSchema = new mongoose.Schema({
     of: String,
     default: {}
   },
+
+  // ─────────────────────────────────────────────────────────────
+  // Customer Trust Media — a single sliding carousel that appears
+  // on the product detail page. Accepts BOTH images and videos.
+  //
+  // Purpose: showcase real customer proof — WhatsApp screenshots,
+  // unboxing photos, customer videos, DM compliments, etc.
+  //
+  // Each entry stores the uploaded file's URL (Cloudinary), its
+  // media type, and optional display metadata.
+  // ─────────────────────────────────────────────────────────────
+  trustMedia: [
+    {
+      _id: false,
+      url: {
+        type: String,
+        required: true,
+        trim: true,
+        maxlength: [2048, 'Media URL is too long']
+      },
+      // 'image' or 'video' — decided at upload time
+      type: {
+        type: String,
+        enum: ['image', 'video'],
+        default: 'image'
+      },
+      // Optional Cloudinary public_id, kept so we could delete the
+      // asset later if needed. Not required.
+      publicId: {
+        type: String,
+        default: ''
+      },
+      // Optional short caption shown under the media (e.g. "Loved it!")
+      caption: {
+        type: String,
+        default: '',
+        maxlength: [200, 'Caption cannot exceed 200 characters']
+      },
+      // Optional customer name (first name only recommended)
+      customerName: {
+        type: String,
+        default: '',
+        maxlength: [50, 'Customer name cannot exceed 50 characters']
+      },
+      // Optional city
+      city: {
+        type: String,
+        default: '',
+        maxlength: [50, 'City cannot exceed 50 characters']
+      },
+      // Optional rating 1–5 (used to render stars on the slide)
+      rating: {
+        type: Number,
+        min: 1,
+        max: 5,
+        default: undefined
+      },
+      // Optional timestamp shown as "x days ago" — auto-set on add
+      addedAt: {
+        type: Date,
+        default: Date.now
+      }
+    }
+  ],
+
   averageRating: {
     type: Number,
     default: 0,

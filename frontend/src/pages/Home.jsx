@@ -218,7 +218,7 @@ function HeroMediaSlider({ hero }) {
       if (currentSlide?.type !== "video") {
         try {
           v.pause();
-        } catch (e) {}
+        } catch (e) { }
       }
     }
   }, [active, slides]);
@@ -245,8 +245,8 @@ function HeroMediaSlider({ hero }) {
         v.muted = true;
         v.playsInline = true;
         const p = v.play();
-        if (p && typeof p.catch === "function") p.catch(() => {});
-      } catch (e) {}
+        if (p && typeof p.catch === "function") p.catch(() => { });
+      } catch (e) { }
     }
   }, [active, slides]);
 
@@ -467,9 +467,8 @@ export default function Home() {
       {hasFeaturedContent && (
         <section
           ref={featuredRef}
-          className={`home-featured-dark reveal-section${
-            featuredInView ? " in-view" : ""
-          }`}
+          className={`home-featured-dark reveal-section${featuredInView ? " in-view" : ""
+            }`}
         >
           <div className="container">
             <div className="home-featured-header">
@@ -520,9 +519,8 @@ export default function Home() {
       {hasCategoriesContent && (
         <section
           ref={categoriesRef}
-          className={`home-section home-section--white reveal-section reveal-categories${
-            categoriesInView ? " in-view" : ""
-          }`}
+          className={`home-section home-section--white reveal-section reveal-categories${categoriesInView ? " in-view" : ""
+            }`}
         >
           <div className="container">
             <div className="home-categories-header">
@@ -578,9 +576,8 @@ export default function Home() {
       {hasBrandContent && (
         <section
           ref={brandRef}
-          className={`home-brand home-brand--dark reveal-section${
-            brandInView ? " in-view" : ""
-          }`}
+          className={`home-brand home-brand--dark reveal-section${brandInView ? " in-view" : ""
+            }`}
         >
           <div className="container home-brand-inner">
             <div className="home-brand-text">

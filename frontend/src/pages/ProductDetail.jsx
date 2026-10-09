@@ -1,7 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { ShoppingBag, Truck, ShieldCheck, ChevronRight, Check, MapPin, ChevronDown } from 'lucide-react';
+import {
+  ShoppingBag,
+  Truck,
+  ShieldCheck,
+  ChevronRight,
+  ChevronDown,
+  Check,
+  MapPin,
+  RotateCcw,
+  MessageCircle,
+  Package
+} from 'lucide-react';
 import { addToCart } from '../store/slices/cartSlice';
 import {
   fetchProductBySlug,
@@ -12,6 +23,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import ProductCard from '../components/product/ProductCard';
 import ReviewSection from '../components/product/ReviewSection';
+import TrustCarousel from '../components/product/TrustCarousel';
 import api from '../services/api';
 import { trackEvent, META_EVENTS } from '../services/metaPixel';
 
@@ -22,7 +34,8 @@ export default function ProductDetail() {
   const isSuperAdmin = user?.role === 'superadmin';
 
   const product = useSelector((state) => selectProductBySlug(state, slug));
-  const relatedProducts = useSelector((state) => selectRelatedProducts(state, product?._id)) || [];
+  const relatedProducts =
+    useSelector((state) => selectRelatedProducts(state, product?._id)) || [];
 
   const [activeImage, setActiveImage] = useState('');
   const [quantity, setQuantity] = useState(1);
@@ -37,9 +50,12 @@ export default function ProductDetail() {
   const [freeShippingThreshold, setFreeShippingThreshold] = useState(5000);
   const [selectedLensIdx, setSelectedLensIdx] = useState(null);
   const [customizeOpen, setCustomizeOpen] = useState(false);
+  const [policyOpen, setPolicyOpen] = useState(false);
 
-  // Meta Pixel: remembers the last product we fired ViewContent for,
-  // so re-renders (quantity change, image swap) don't double-fire.
+  // ===== GLOBAL trust media (shown on every product) =====
+  const [globalTrustMedia, setGlobalTrustMedia] = useState([]);
+
+  // Meta Pixel: remembers the last product we fired ViewContent for.
   const lastTrackedProductId = useRef(null);
 
   const formatDate = (date) =>
@@ -55,14 +71,16 @@ export default function ProductDetail() {
       return date;
     };
 
-    const containsSunday = Array.from({ length: 6 }, (_, index) => addDays(index)).some(
-      (date) => date.getDay() === 0
-    );
+    const containsSunday = Array.from({ length: 6 }, (_, index) =>
+      addDays(index)
+    ).some((date) => date.getDay() === 0);
 
     return {
       ordered: formatDate(today),
       shipped: `${formatDate(addDays(1))} – ${formatDate(addDays(2))}`,
-      delivered: `${formatDate(addDays(3))} – ${formatDate(addDays(containsSunday ? 6 : 5))}`
+      delivered: `${formatDate(addDays(3))} – ${formatDate(
+        addDays(containsSunday ? 6 : 5)
+      )}`
     };
   };
 
@@ -76,8 +94,6 @@ export default function ProductDetail() {
   }, [product]);
 
   // ===== Meta Pixel: ViewContent =====
-  // Fires once per product (guarded by _id). Meta uses this to build
-  // retargeting audiences and to optimise ad delivery.
   useEffect(() => {
     if (!product || !product._id) return;
     if (lastTrackedProductId.current === product._id) return;
@@ -118,24 +134,32 @@ export default function ProductDetail() {
     }
   }, [dispatch, product?._id]);
 
+  // ===== Load site content once for lens options, shipping threshold,
+  // AND the global trust media (same reviews on every product). =====
   useEffect(() => {
-    const fetchLensOptions = async () => {
+    const fetchSiteContent = async () => {
       try {
         const res = await api.get('/site-content/homepage');
-        if (res.success) {
+        if (res.success && res.content) {
+          // Lens options
           if (Array.isArray(res.content?.store?.lensOptions)) {
             setLensOptions(res.content.store.lensOptions);
           }
+          // Free shipping threshold
           const threshold = res.content?.store?.freeShippingThreshold;
           if (typeof threshold === 'number' && Number.isFinite(threshold)) {
             setFreeShippingThreshold(threshold);
+          }
+          // Global trust media (used by the marquee carousel)
+          if (Array.isArray(res.content?.store?.trustMedia)) {
+            setGlobalTrustMedia(res.content.store.trustMedia);
           }
         }
       } catch (err) {
         // Non-blocking
       }
     };
-    fetchLensOptions();
+    fetchSiteContent();
 
     setSelectedLensIdx(null);
   }, [slug]);
@@ -156,7 +180,9 @@ export default function ProductDetail() {
         return;
       }
       if (selectedLens && !desc && !img) {
-        setCartError('Please provide your prescription to continue with a lens selection');
+        setCartError(
+          'Please provide your prescription to continue with a lens selection'
+        );
         return;
       }
 
@@ -221,7 +247,10 @@ export default function ProductDetail() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', padding: '8rem' }} className="pdp-loading">
+      <div
+        style={{ display: 'flex', justifyContent: 'center', padding: '8rem' }}
+        className="pdp-loading"
+      >
         <div className="spinner"></div>
       </div>
     );
@@ -229,8 +258,17 @@ export default function ProductDetail() {
 
   if (!product) {
     return (
-      <div className="container pdp-notfound" style={{ textAlign: 'center', padding: '6rem 1.5rem' }}>
-        <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '2rem', color: '#000000' }}>
+      <div
+        className="container pdp-notfound"
+        style={{ textAlign: 'center', padding: '6rem 1.5rem' }}
+      >
+        <h2
+          style={{
+            fontFamily: 'var(--font-serif)',
+            fontSize: '2rem',
+            color: '#000000'
+          }}
+        >
           Product Not Found
         </h2>
         <p style={{ marginTop: '0.5rem', color: '#767676' }}>
@@ -263,19 +301,25 @@ export default function ProductDetail() {
       >
         <Link to="/">Home</Link> <ChevronRight size={12} />
         <Link to="/products">Catalog</Link> <ChevronRight size={12} />
-        {(product.categoryPath?.l1 || product.categoryPath?.l2 || product.categoryPath?.l3) &&
-          [product.categoryPath.l1, product.categoryPath.l2, product.categoryPath.l3]
+        {(product.categoryPath?.l1 ||
+          product.categoryPath?.l2 ||
+          product.categoryPath?.l3) &&
+          [
+            product.categoryPath.l1,
+            product.categoryPath.l2,
+            product.categoryPath.l3
+          ]
             .filter(Boolean)
             .map((category) => (
               <React.Fragment key={category._id}>
                 <ChevronRight size={12} />
-                <Link to={`/products?category=${category.slug}`}>{category.name}</Link>
+                <Link to={`/products?category=${category.slug}`}>
+                  {category.name}
+                </Link>
               </React.Fragment>
             ))}
         <ChevronRight size={12} />
-        <span style={{ color: '#000000', fontWeight: 600 }}>
-          {product.name}
-        </span>
+        <span style={{ color: '#000000', fontWeight: 600 }}>{product.name}</span>
       </div>
 
       {/* Main Product Layout */}
@@ -288,7 +332,7 @@ export default function ProductDetail() {
           alignItems: 'start'
         }}
       >
-        {/* Left Image Gallery */}
+        {/* ========== LEFT — IMAGE GALLERY ========== */}
         <div style={{ minWidth: 0 }}>
           <div
             style={{
@@ -314,7 +358,6 @@ export default function ProductDetail() {
             />
           </div>
 
-          {/* Thumbnail Strip */}
           {product.images && product.images.length > 1 && (
             <div className="pdp-thumbs" style={{ display: 'flex', gap: '1rem' }}>
               {product.images.map((imgUrl, idx) => (
@@ -349,7 +392,7 @@ export default function ProductDetail() {
           )}
         </div>
 
-        {/* Right Product Information */}
+        {/* ========== RIGHT — PRODUCT INFO ========== */}
         <div style={{ minWidth: 0 }}>
           <span
             style={{
@@ -360,7 +403,11 @@ export default function ProductDetail() {
               fontWeight: 600
             }}
           >
-            {[product.categoryPath?.l1, product.categoryPath?.l2, product.categoryPath?.l3]
+            {[
+              product.categoryPath?.l1,
+              product.categoryPath?.l2,
+              product.categoryPath?.l3
+            ]
               .filter(Boolean)
               .map((category) => category.name)
               .join(' / ')}
@@ -422,9 +469,7 @@ export default function ProductDetail() {
                 In Stock ({product.stock} units)
               </span>
             ) : (
-              <span className="badge badge-dark">
-                Out of Stock
-              </span>
+              <span className="badge badge-dark">Out of Stock</span>
             )}
           </div>
 
@@ -441,7 +486,7 @@ export default function ProductDetail() {
             {product.description}
           </p>
 
-          {/* Customization — only for customizable products */}
+          {/* ========== CUSTOMIZATION ========== */}
           {product.isCustomizable && !isSuperAdmin && (
             <div
               style={{
@@ -453,7 +498,6 @@ export default function ProductDetail() {
                 borderRadius: 'var(--radius-sm)'
               }}
             >
-              {/* Header row with toggle on the top-right */}
               <div
                 style={{
                   display: 'flex',
@@ -491,7 +535,11 @@ export default function ProductDetail() {
                   onClick={() => setCustomizeOpen((v) => !v)}
                   aria-expanded={customizeOpen}
                   aria-controls="pdp-customize-panel"
-                  aria-label={customizeOpen ? 'Collapse lens customization' : 'Expand lens customization'}
+                  aria-label={
+                    customizeOpen
+                      ? 'Collapse lens customization'
+                      : 'Expand lens customization'
+                  }
                   style={{
                     flexShrink: 0,
                     display: 'inline-flex',
@@ -523,16 +571,16 @@ export default function ProductDetail() {
                     size={14}
                     style={{
                       transition: 'transform 0.2s ease',
-                      transform: customizeOpen ? 'rotate(180deg)' : 'rotate(0deg)'
+                      transform: customizeOpen
+                        ? 'rotate(180deg)'
+                        : 'rotate(0deg)'
                     }}
                   />
                 </button>
               </div>
 
-              {/* Collapsible content — only rendered when open */}
               {customizeOpen && (
                 <div id="pdp-customize-panel">
-                  {/* Prescription text */}
                   <label
                     style={{
                       display: 'block',
@@ -572,7 +620,6 @@ export default function ProductDetail() {
                     {prescriptionText.length} / 2000
                   </p>
 
-                  {/* Prescription image upload */}
                   <label
                     style={{
                       display: 'block',
@@ -644,14 +691,16 @@ export default function ProductDetail() {
                           borderRadius: 'var(--radius-sm)',
                           cursor: 'pointer',
                           background: 'transparent',
-                          transition: 'background-color 0.3s ease, color 0.3s ease'
+                          transition:
+                            'background-color 0.3s ease, color 0.3s ease'
                         }}
                         onMouseEnter={(e) => {
                           e.currentTarget.style.backgroundColor = '#000000';
                           e.currentTarget.style.color = '#FFFFFF';
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = 'transparent';
+                          e.currentTarget.style.backgroundColor =
+                            'transparent';
                           e.currentTarget.style.color = '#000000';
                         }}
                       >
@@ -699,7 +748,6 @@ export default function ProductDetail() {
                     </p>
                   )}
 
-                  {/* Cylinder note */}
                   <div
                     style={{
                       display: 'flex',
@@ -714,13 +762,15 @@ export default function ProductDetail() {
                   >
                     <span style={{ flexShrink: 0, marginTop: '1px' }}>ⓘ</span>
                     <span>
-                      If your prescription includes a <strong style={{ color: '#000000' }}>cylinder / cylindrical</strong>{' '}
-                      number, we will contact you on WhatsApp to confirm before dispatching
-                      your order.
+                      If your prescription includes a{' '}
+                      <strong style={{ color: '#000000' }}>
+                        cylinder / cylindrical
+                      </strong>{' '}
+                      number, we will contact you on WhatsApp to confirm before
+                      dispatching your order.
                     </span>
                   </div>
 
-                  {/* Lens Options — only when the admin configured them */}
                   {lensOptions.length > 0 && (
                     <div
                       style={{
@@ -743,7 +793,13 @@ export default function ProductDetail() {
                         Select Lens Type
                       </label>
 
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.6rem'
+                        }}
+                      >
                         {lensOptions.map((opt, idx) => {
                           const isSelected = selectedLensIdx === idx;
                           return (
@@ -758,9 +814,12 @@ export default function ProductDetail() {
                                   ? '2px solid #000000'
                                   : '1px solid #E0E0E0',
                                 borderRadius: 'var(--radius-sm)',
-                                backgroundColor: isSelected ? '#F5F5F5' : '#FFFFFF',
+                                backgroundColor: isSelected
+                                  ? '#F5F5F5'
+                                  : '#FFFFFF',
                                 cursor: 'pointer',
-                                transition: 'border-color 0.15s, background-color 0.15s'
+                                transition:
+                                  'border-color 0.15s, background-color 0.15s'
                               }}
                             >
                               <input
@@ -803,7 +862,9 @@ export default function ProductDetail() {
                                     }}
                                   >
                                     {opt.price > 0
-                                      ? `+PKR ${Number(opt.price).toLocaleString()}`
+                                      ? `+PKR ${Number(
+                                          opt.price
+                                        ).toLocaleString()}`
                                       : 'Free'}
                                   </span>
                                 </div>
@@ -831,7 +892,7 @@ export default function ProductDetail() {
             </div>
           )}
 
-          {/* Quantity & Add to Cart Controls */}
+          {/* ========== QUANTITY & ADD TO CART ========== */}
           {isSuperAdmin ? (
             <div
               style={{
@@ -846,9 +907,7 @@ export default function ProductDetail() {
                 lineHeight: '1.6'
               }}
             >
-              <strong style={{ color: '#000000' }}>
-                Admin Preview Mode.
-              </strong>{' '}
+              <strong style={{ color: '#000000' }}>Admin Preview Mode.</strong>{' '}
               You are viewing this product as the Super Admin. Sign in with a
               customer account to add items to a cart and place orders.
             </div>
@@ -870,11 +929,7 @@ export default function ProductDetail() {
 
               <div
                 className="pdp-qty-row"
-                style={{
-                  display: 'flex',
-                  gap: '1rem',
-                  alignItems: 'center'
-                }}
+                style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}
               >
                 <div
                   style={{
@@ -889,7 +944,8 @@ export default function ProductDetail() {
                     style={{
                       padding: '0.6rem 1.2rem',
                       fontSize: '1.1rem',
-                      transition: 'background-color 0.3s ease, color 0.3s ease'
+                      transition:
+                        'background-color 0.3s ease, color 0.3s ease'
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.backgroundColor = '#000000';
@@ -922,7 +978,8 @@ export default function ProductDetail() {
                     style={{
                       padding: '0.6rem 1.2rem',
                       fontSize: '1.1rem',
-                      transition: 'background-color 0.3s ease, color 0.3s ease'
+                      transition:
+                        'background-color 0.3s ease, color 0.3s ease'
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.backgroundColor = '#000000';
@@ -972,10 +1029,42 @@ export default function ProductDetail() {
                   {cartError}
                 </p>
               )}
+
+              {/* ========== COMPACT TRUST PANEL ========== */}
+              <div
+                className="pdp-trust-panel"
+                style={{
+                  marginTop: '1.25rem',
+                  border: '1px solid #E0E0E0',
+                  backgroundColor: '#FAFAFA'
+                }}
+              >
+                <TrustRow
+                  icon={<Truck size={16} />}
+                  title="Cash on Delivery"
+                  text={`Free shipping over PKR ${freeShippingThreshold.toLocaleString()}`}
+                />
+                <TrustRow
+                  icon={<Package size={16} />}
+                  title="Nationwide Delivery"
+                  text="2–4 business days for major cities"
+                />
+                <TrustRow
+                  icon={<RotateCcw size={16} />}
+                  title="Replacement Support"
+                  text="Damaged or wrong item? We replace it"
+                />
+                <TrustRow
+                  icon={<MessageCircle size={16} />}
+                  title="Chat With Us"
+                  text="Questions before you order? Message us"
+                  isLast
+                />
+              </div>
             </div>
           )}
 
-          {/* Value Banners */}
+          {/* ========== VALUE BANNERS (delivery stepper etc.) ========== */}
           <div
             style={{
               backgroundColor: '#F5F5F5',
@@ -1031,8 +1120,8 @@ export default function ProductDetail() {
                 }}
               />
               <span>
-                100% guaranteed authentic product. Inspect your parcel upon
-                delivery before paying.
+                Every parcel is inspected before dispatch. Inspect your order
+                upon delivery before paying.
               </span>
             </div>
 
@@ -1093,14 +1182,119 @@ export default function ProductDetail() {
               </div>
             </div>
           </div>
+
+          {/* ========== REPLACEMENT & RETURNS ACCORDION ========== */}
+          <div
+            className="pdp-policy-accordion"
+            style={{
+              marginTop: '1.5rem',
+              border: '1px solid #E0E0E0',
+              backgroundColor: '#FFFFFF'
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setPolicyOpen((v) => !v)}
+              aria-expanded={policyOpen}
+              style={{
+                width: '100%',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '1rem 1.25rem',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '0.85rem',
+                fontWeight: 700,
+                color: '#000000',
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase'
+              }}
+            >
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                <RotateCcw size={16} /> Replacement & Returns Policy
+              </span>
+              <ChevronDown
+                size={16}
+                style={{
+                  transition: 'transform 0.2s ease',
+                  transform: policyOpen ? 'rotate(180deg)' : 'rotate(0deg)'
+                }}
+              />
+            </button>
+
+            {policyOpen && (
+              <div
+                style={{
+                  padding: '0 1.25rem 1.25rem',
+                  fontSize: '0.85rem',
+                  color: '#444444',
+                  lineHeight: '1.7'
+                }}
+              >
+                <p style={{ marginTop: 0 }}>
+                  We want you to be completely satisfied with your purchase.
+                  If something isn't right, we'll make it right.
+                </p>
+
+                <strong style={{ color: '#000000', display: 'block', marginTop: '0.75rem' }}>
+                  What we cover
+                </strong>
+                <ul style={{ margin: '0.35rem 0 0.75rem 1.1rem', padding: 0 }}>
+                  <li>Wrong item delivered</li>
+                  <li>Item damaged in transit</li>
+                  <li>Defective item that doesn't function as intended</li>
+                  <li>Missing components from a multi-item order</li>
+                </ul>
+
+                <strong style={{ color: '#000000', display: 'block', marginTop: '0.75rem' }}>
+                  How to request a replacement
+                </strong>
+                <ol style={{ margin: '0.35rem 0 0.75rem 1.1rem', padding: 0 }}>
+                  <li>Take a photo or short video of the issue</li>
+                  <li>
+                    Contact us on WhatsApp within <strong>48 hours</strong> of
+                    delivery with your Order ID
+                  </li>
+                  <li>Our team verifies within 24 hours and confirms the replacement</li>
+                  <li>We dispatch the replacement at no extra cost</li>
+                </ol>
+
+                <p
+                  style={{
+                    margin: '1rem 0 0',
+                    fontSize: '0.78rem',
+                    color: '#767676',
+                    paddingTop: '0.75rem',
+                    borderTop: '1px dashed #E0E0E0'
+                  }}
+                >
+                  Please note — we do <strong>not</strong> offer cash refunds.
+                  All eligible issues are resolved via replacement of the same
+                  or equivalent item.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Customer Reviews Section — centered on desktop via .pdp-reviews */}
+        {/* ========== REVIEWS (full-width on desktop) ========== */}
         <div className="pdp-reviews">
           <ReviewSection productId={product._id} productName={product.name} />
         </div>
 
-        {/* Related Products Section */}
+        {/* ========== GLOBAL TRUST CAROUSEL (shown on EVERY product) ========== */}
+        {Array.isArray(globalTrustMedia) && globalTrustMedia.length > 0 && (
+          <div className="pdp-trust-carousel">
+            <TrustCarousel
+              media={globalTrustMedia}
+              title="Real Customer Reviews & Proof"
+            />
+          </div>
+        )}
+
+        {/* ========== RELATED PRODUCTS ========== */}
         {relatedProducts.length > 0 && (
           <div
             className="pdp-related"
@@ -1131,7 +1325,6 @@ export default function ProductDetail() {
         )}
 
         <style>{`
-          /* Responsive fixes only — no other changes */
           .pdp-grid > div {
             min-width: 0;
           }
@@ -1268,9 +1461,17 @@ export default function ProductDetail() {
             background-color: #000000;
           }
 
-          /* Desktop-only: center the Customer Reviews section horizontally
-             across the full width of the PDP grid. Mobile and tablet are
-             untouched — the media queries above still control those. */
+          .pdp-trust-panel .trust-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 0.85rem 1rem;
+            border-bottom: 1px solid #E0E0E0;
+          }
+          .pdp-trust-panel .trust-row:last-child {
+            border-bottom: none;
+          }
+
           @media (min-width: 1025px) {
             .pdp-grid > .pdp-reviews {
               grid-column: 1 / -1;
@@ -1282,8 +1483,58 @@ export default function ProductDetail() {
               width: 100%;
               max-width: 900px;
             }
+            .pdp-grid > .pdp-trust-carousel {
+              grid-column: 1 / -1;
+              width: 100%;
+            }
+          }
+
+          @media (max-width: 1024px) {
+            .pdp-trust-carousel {
+              margin-top: 3rem;
+            }
           }
         `}</style>
+      </div>
+    </div>
+  );
+}
+
+/* --------------------------------------------------------------------- */
+/* Small helper — one row of the compact trust panel                     */
+/* --------------------------------------------------------------------- */
+function TrustRow({ icon, title, text, isLast }) {
+  return (
+    <div
+      className="trust-row"
+      style={isLast ? { borderBottom: 'none' } : undefined}
+    >
+      <div
+        style={{
+          color: '#000000',
+          flexShrink: 0,
+          marginTop: 2,
+          width: 20,
+          display: 'inline-flex',
+          justifyContent: 'center'
+        }}
+      >
+        {icon}
+      </div>
+      <div style={{ minWidth: 0 }}>
+        <div
+          style={{
+            fontSize: '0.8rem',
+            fontWeight: 700,
+            color: '#000000',
+            marginBottom: '0.15rem'
+          }}
+        >
+          {title}
+        </div>
+        <div style={{ fontSize: '0.75rem', color: '#767676', lineHeight: 1.4 }}>
+          {text}
+        </div>
       </div>
     </div>
   );

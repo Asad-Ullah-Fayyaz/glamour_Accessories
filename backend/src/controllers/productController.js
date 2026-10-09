@@ -85,6 +85,62 @@ const getCategorySubtreeIds = async (category) => {
 };
 
 // -------------------------------------------------------------------------
+// SANITIZE trustMedia ARRAY
+// -------------------------------------------------------------------------
+// Accepts any array from the request body and returns a clean, safe array
+// containing only well-formed entries. Silently drops malformed items.
+// Preserves admin-defined order.
+const sanitizeTrustMedia = (raw) => {
+  if (!Array.isArray(raw)) return [];
+
+  const clean = [];
+
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue;
+
+    const url = typeof item.url === 'string' ? item.url.trim() : '';
+    if (!url) continue;
+
+    const type = item.type === 'video' ? 'video' : 'image';
+
+    const entry = {
+      url,
+      type,
+      publicId:
+        typeof item.publicId === 'string'
+          ? item.publicId.trim().slice(0, 500)
+          : '',
+      caption:
+        typeof item.caption === 'string'
+          ? item.caption.trim().slice(0, 200)
+          : '',
+      customerName:
+        typeof item.customerName === 'string'
+          ? item.customerName.trim().slice(0, 50)
+          : '',
+      city:
+        typeof item.city === 'string'
+          ? item.city.trim().slice(0, 50)
+          : '',
+      addedAt: item.addedAt ? new Date(item.addedAt) : new Date()
+    };
+
+    // Optional rating (1–5). Dropped if invalid.
+    if (item.rating !== undefined && item.rating !== null && item.rating !== '') {
+      const n = Number(item.rating);
+      if (Number.isFinite(n) && n >= 1 && n <= 5) {
+        entry.rating = Math.round(n);
+      }
+    }
+
+    clean.push(entry);
+  }
+
+  // Hard cap: no more than 30 items per product to keep the carousel sane
+  return clean.slice(0, 30);
+};
+
+// -------------------------------------------------------------------------
 // PUBLIC
 // -------------------------------------------------------------------------
 
@@ -284,7 +340,8 @@ exports.createProduct = async (req, res, next) => {
       isCustomizable,
       isOnSale,
       salePrice,
-      newIs
+      newIs,
+      trustMedia
     } = req.body;
 
     const saleFields = normalizeSaleFields(req.body);
@@ -317,7 +374,8 @@ exports.createProduct = async (req, res, next) => {
       isOnSale: Boolean(isOnSale),
       newIs: Boolean(newIs),
       onSale: saleFields.onSale,
-      previousPrice: saleFields.previousPrice
+      previousPrice: saleFields.previousPrice,
+      trustMedia: sanitizeTrustMedia(trustMedia)
     };
 
     const normalizedSalePrice = Number(salePrice);
@@ -352,7 +410,8 @@ exports.updateProduct = async (req, res, next) => {
       isCustomizable,
       isOnSale,
       salePrice,
-      newIs
+      newIs,
+      trustMedia
     } = req.body;
     const updateData = {};
 
@@ -395,6 +454,12 @@ exports.updateProduct = async (req, res, next) => {
     if (isCustomizable !== undefined) updateData.isCustomizable = Boolean(isCustomizable);
     if (isOnSale !== undefined) updateData.isOnSale = Boolean(isOnSale);
     if (newIs !== undefined) updateData.newIs = Boolean(newIs);
+
+    // trustMedia is fully replaced on every update (the admin sends the
+    // complete array — add, remove, and reorder all happen client-side).
+    if (trustMedia !== undefined) {
+      updateData.trustMedia = sanitizeTrustMedia(trustMedia);
+    }
 
     if (salePrice !== undefined && salePrice !== null && salePrice !== '') {
       const normalizedSalePrice = Number(salePrice);
