@@ -229,9 +229,9 @@ export default function TrustCarousel({
           position: 'relative',
           paddingBottom: '0.5rem',
           maskImage:
-            'linear-gradient(to right, transparent 0, #000 80px, #000 calc(100% - 80px), transparent 100%)',
+            'linear-gradient(to right, transparent 0, #000 80px, #000 calc(100% - 40px), transparent 100%)',
           WebkitMaskImage:
-            'linear-gradient(to right, transparent 0, #000 80px, #000 calc(100% - 80px), transparent 100%)'
+            'linear-gradient(to right, transparent 0, #000 80px, #000 calc(100% - 40px), transparent 100%)'
         }}
       >
         <div
