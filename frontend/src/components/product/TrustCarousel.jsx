@@ -78,31 +78,36 @@ export default function TrustCarousel({
   if (items.length === 0) return null;
 
   // ============================================================
-  // MARQUEE COPIES CALCULATION — the fix for wide screens
+  // MARQUEE — bulletproof seamless loop for any screen size
   // ============================================================
-  // One cycle = one full set of items (each item's width + gap).
   const gap = 16;
-  const cyclePx = items.length * (slideWidth + gap);
+  const oneSetWidth = items.length * (slideWidth + gap);
 
-  // We need enough copies so the TOTAL track width is at least 3× the
-  // viewport width. This guarantees a seamless loop on any screen,
-  // including 4K and ultrawide monitors.
-  const copiesNeeded = Math.max(
-    3,
-    Math.ceil((viewportWidth * 3) / cyclePx)
-  );
+  // How many full sets do we need so that ONE base group is at least
+  // as wide as the viewport? (So -50% translate always shows content.)
+  const setsNeeded = Math.max(1, Math.ceil(viewportWidth / oneSetWidth));
 
-  // Build the track by repeating the items array copiesNeeded times.
-  const marqueeItems = [];
-  for (let c = 0; c < copiesNeeded; c += 1) {
+  // Build the base group (setsNeeded copies of items).
+  const baseGroup = [];
+  for (let s = 0; s < setsNeeded; s += 1) {
     for (let i = 0; i < items.length; i += 1) {
-      marqueeItems.push({ ...items[i], __key: `${c}-${i}` });
+      baseGroup.push({ ...items[i], __key: `base-${s}-${i}` });
     }
   }
 
-  // Duration scales with cycle width so the speed feels consistent
-  // regardless of screen size or item count.
-  const loopDurationSec = Math.max(25, items.length * 6);
+  // Duplicate the base group for the seamless loop.
+  // Track = 2 × baseGroup, animation goes 0 → -50% (exactly one group).
+  const marqueeItems = [
+    ...baseGroup,
+    ...baseGroup.map((it, idx) => ({ ...it, __key: `dup-${idx}` }))
+  ];
+
+  // Keep pixel speed roughly constant across screen sizes (~70px/s).
+  const pixelsPerSecond = 70;
+  const loopDurationSec = Math.max(
+    20,
+    (baseGroup.length * (slideWidth + gap)) / pixelsPerSecond
+  );
 
   return (
     <section
@@ -223,7 +228,6 @@ export default function TrustCarousel({
           width: '100%',
           position: 'relative',
           paddingBottom: '0.5rem',
-          // Wider fade on both edges — hides the seam better on wide screens
           maskImage:
             'linear-gradient(to right, transparent 0, #000 80px, #000 calc(100% - 80px), transparent 100%)',
           WebkitMaskImage:
@@ -237,8 +241,7 @@ export default function TrustCarousel({
             gap: `${gap}px`,
             width: 'max-content',
             animation: `trustMarqueeScroll ${loopDurationSec}s linear infinite`,
-            animationPlayState: paused ? 'paused' : 'running',
-            '--cycle-width': `${cyclePx}px`
+            animationPlayState: paused ? 'paused' : 'running'
           }}
         >
           {marqueeItems.map((item, i) => (
@@ -278,7 +281,7 @@ export default function TrustCarousel({
             transform: translateX(0);
           }
           to {
-            transform: translateX(calc(-1 * var(--cycle-width)));
+            transform: translateX(-50%);
           }
         }
 
