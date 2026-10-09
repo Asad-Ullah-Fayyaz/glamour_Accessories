@@ -1,31 +1,7 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Star, Play, X, ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
 import { toAbsoluteUrl } from '../../services/api';
 
-/**
- * TrustCarousel
- * ---------------
- * Marquee-style horizontal scroller of customer trust media (images + videos)
- * with a bold 7-day return banner above the carousel.
- *
- * Props:
- *   media: Array<{
- *     url: string,
- *     type: 'image' | 'video',
- *     caption?: string,
- *     customerName?: string,
- *     city?: string,
- *     rating?: number (1-5)
- *   }>
- *   title?: string (optional section heading override)
- *
- * Behaviour:
- *   - Slides scroll horizontally in an infinite marquee loop.
- *   - Marquee pauses when the user hovers over the carousel.
- *   - Videos auto-play muted and loop silently.
- *   - Clicking any slide opens a lightbox (sound-on video playback, large image).
- *   - Fully responsive across 320px → 4K screens.
- */
 export default function TrustCarousel({
   media,
   title = 'Real Customer Moments'
@@ -34,7 +10,10 @@ export default function TrustCarousel({
 
   const [lightboxIndex, setLightboxIndex] = useState(null);
   const [paused, setPaused] = useState(false);
-  const [slideWidth, setSlideWidth] = useState(260);
+  const [slideWidth, setSlideWidth] = useState(280);
+  const [viewportWidth, setViewportWidth] = useState(
+    typeof window !== 'undefined' ? window.innerWidth : 1440
+  );
 
   const marqueeRef = useRef(null);
   const touchStartX = useRef(null);
@@ -42,20 +21,22 @@ export default function TrustCarousel({
 
   const totalItems = items.length;
 
-  // -------------------- responsive slide width --------------------
+  // -------------------- responsive slide width + viewport --------------------
   useEffect(() => {
-    const updateSlideWidth = () => {
+    const updateDimensions = () => {
       const w = window.innerWidth;
+      setViewportWidth(w);
       if (w <= 380) setSlideWidth(180);
       else if (w <= 480) setSlideWidth(200);
       else if (w <= 640) setSlideWidth(220);
       else if (w <= 900) setSlideWidth(240);
-      else if (w <= 1200) setSlideWidth(280);
+      else if (w <= 1200) setSlideWidth(270);
+      else if (w <= 1600) setSlideWidth(300);
       else setSlideWidth(320);
     };
-    updateSlideWidth();
-    window.addEventListener('resize', updateSlideWidth);
-    return () => window.removeEventListener('resize', updateSlideWidth);
+    updateDimensions();
+    window.addEventListener('resize', updateDimensions);
+    return () => window.removeEventListener('resize', updateDimensions);
   }, []);
 
   // -------------------- keyboard (lightbox) --------------------
@@ -87,10 +68,8 @@ export default function TrustCarousel({
     touchEndX.current = e.changedTouches[0].clientX;
     const dx = (touchStartX.current || 0) - (touchEndX.current || 0);
     if (lightboxIndex !== null && Math.abs(dx) > 40) {
-      if (dx > 0)
-        setLightboxIndex((i) => (i + 1) % totalItems);
-      else
-        setLightboxIndex((i) => (i - 1 + totalItems) % totalItems);
+      if (dx > 0) setLightboxIndex((i) => (i + 1) % totalItems);
+      else setLightboxIndex((i) => (i - 1 + totalItems) % totalItems);
     }
     touchStartX.current = null;
     touchEndX.current = null;
@@ -98,16 +77,32 @@ export default function TrustCarousel({
 
   if (items.length === 0) return null;
 
-  // Duplicate the array so the marquee has no visible seam.
-  // We render 3 copies for a wide track, giving the animation plenty of room.
-  const marqueeItems = [...items, ...items, ...items];
+  // ============================================================
+  // MARQUEE COPIES CALCULATION — the fix for wide screens
+  // ============================================================
+  // One cycle = one full set of items (each item's width + gap).
+  const gap = 16;
+  const cyclePx = items.length * (slideWidth + gap);
 
-  // Total width of one "cycle" (one full set of items).
-  const cycleWidth = items.length * (slideWidth + 16); // +16 = gap between slides
+  // We need enough copies so the TOTAL track width is at least 3× the
+  // viewport width. This guarantees a seamless loop on any screen,
+  // including 4K and ultrawide monitors.
+  const copiesNeeded = Math.max(
+    3,
+    Math.ceil((viewportWidth * 3) / cyclePx)
+  );
 
-  // Duration of one full loop — scales with the number of items so it never
-  // feels too fast or too slow.
-  const loopDurationSec = Math.max(20, items.length * 5);
+  // Build the track by repeating the items array copiesNeeded times.
+  const marqueeItems = [];
+  for (let c = 0; c < copiesNeeded; c += 1) {
+    for (let i = 0; i < items.length; i += 1) {
+      marqueeItems.push({ ...items[i], __key: `${c}-${i}` });
+    }
+  }
+
+  // Duration scales with cycle width so the speed feels consistent
+  // regardless of screen size or item count.
+  const loopDurationSec = Math.max(25, items.length * 6);
 
   return (
     <section
@@ -228,28 +223,27 @@ export default function TrustCarousel({
           width: '100%',
           position: 'relative',
           paddingBottom: '0.5rem',
-          // Fade edges so the marquee doesn't end abruptly
+          // Wider fade on both edges — hides the seam better on wide screens
           maskImage:
-            'linear-gradient(to right, transparent 0, #000 40px, #000 calc(100% - 40px), transparent 100%)',
+            'linear-gradient(to right, transparent 0, #000 80px, #000 calc(100% - 80px), transparent 100%)',
           WebkitMaskImage:
-            'linear-gradient(to right, transparent 0, #000 40px, #000 calc(100% - 40px), transparent 100%)'
+            'linear-gradient(to right, transparent 0, #000 80px, #000 calc(100% - 80px), transparent 100%)'
         }}
       >
         <div
           className="trust-marquee-inner"
           style={{
             display: 'flex',
-            gap: '16px',
+            gap: `${gap}px`,
             width: 'max-content',
             animation: `trustMarqueeScroll ${loopDurationSec}s linear infinite`,
             animationPlayState: paused ? 'paused' : 'running',
-            // translate distance = one cycle worth of pixels
-            '--cycle-width': `${cycleWidth}px`
+            '--cycle-width': `${cyclePx}px`
           }}
         >
           {marqueeItems.map((item, i) => (
             <div
-              key={`${item.url}-${i}`}
+              key={item.__key}
               style={{
                 width: slideWidth,
                 flexShrink: 0
@@ -284,12 +278,10 @@ export default function TrustCarousel({
             transform: translateX(0);
           }
           to {
-            /* one full cycle = items.length * (slideWidth + 16px gap) */
             transform: translateX(calc(-1 * var(--cycle-width)));
           }
         }
 
-        /* Respect reduced motion preferences */
         @media (prefers-reduced-motion: reduce) {
           .trust-marquee-inner {
             animation: none !important;
@@ -297,7 +289,6 @@ export default function TrustCarousel({
           }
         }
 
-        /* On small phones make sure the banner stacks nicely */
         @media (max-width: 480px) {
           .trust-carousel {
             margin-top: 3rem !important;
@@ -315,16 +306,12 @@ function TrustSlide({ item, onOpen }) {
   const isVideo = item.type === 'video';
   const videoRef = useRef(null);
 
-  // Auto-play muted preview when the video enters the viewport.
-  // The IntersectionObserver pattern is more battery-friendly than
-  // autoplay-in-markup, because offscreen slides never play.
   useEffect(() => {
     if (!isVideo) return;
     const el = videoRef.current;
     if (!el) return;
 
     if (typeof IntersectionObserver === 'undefined') {
-      // Fallback: just play it
       el.play().catch(() => {});
       return;
     }
@@ -370,7 +357,6 @@ function TrustSlide({ item, onOpen }) {
       }}
       aria-label={isVideo ? 'Play customer video' : 'View customer photo'}
     >
-      {/* Media area */}
       <div
         style={{
           position: 'relative',
@@ -396,7 +382,6 @@ function TrustSlide({ item, onOpen }) {
                 display: 'block'
               }}
             />
-            {/* Play overlay hint */}
             <div
               style={{
                 position: 'absolute',
@@ -440,7 +425,6 @@ function TrustSlide({ item, onOpen }) {
           />
         )}
 
-        {/* Video badge */}
         {isVideo && (
           <span
             style={{
@@ -461,9 +445,7 @@ function TrustSlide({ item, onOpen }) {
         )}
       </div>
 
-      {/* Metadata footer */}
       <div style={{ padding: '0.75rem 0.85rem 0.9rem' }}>
-        {/* Rating */}
         {item.rating ? (
           <div style={{ display: 'flex', gap: 2, marginBottom: '0.35rem' }}>
             {[1, 2, 3, 4, 5].map((n) => (
@@ -477,7 +459,6 @@ function TrustSlide({ item, onOpen }) {
           </div>
         ) : null}
 
-        {/* Caption */}
         {item.caption ? (
           <p
             style={{
@@ -497,7 +478,6 @@ function TrustSlide({ item, onOpen }) {
           </p>
         ) : null}
 
-        {/* Name + City */}
         {(item.customerName || item.city) && (
           <div
             style={{
@@ -524,7 +504,7 @@ function TrustSlide({ item, onOpen }) {
 }
 
 /* --------------------------------------------------------------------- */
-/* Lightbox — full-screen viewer for a single slide                      */
+/* Lightbox                                                              */
 /* --------------------------------------------------------------------- */
 function Lightbox({ item, onClose, onPrev, onNext, index, total }) {
   const isVideo = item.type === 'video';
@@ -547,7 +527,6 @@ function Lightbox({ item, onClose, onPrev, onNext, index, total }) {
         padding: '1rem'
       }}
     >
-      {/* Close */}
       <button
         type="button"
         onClick={onClose}
@@ -572,7 +551,6 @@ function Lightbox({ item, onClose, onPrev, onNext, index, total }) {
         <X size={22} />
       </button>
 
-      {/* Prev */}
       {total > 1 && (
         <button
           type="button"
@@ -603,7 +581,6 @@ function Lightbox({ item, onClose, onPrev, onNext, index, total }) {
         </button>
       )}
 
-      {/* Next */}
       {total > 1 && (
         <button
           type="button"
@@ -634,7 +611,6 @@ function Lightbox({ item, onClose, onPrev, onNext, index, total }) {
         </button>
       )}
 
-      {/* Media wrapper */}
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
@@ -673,7 +649,6 @@ function Lightbox({ item, onClose, onPrev, onNext, index, total }) {
           />
         )}
 
-        {/* Metadata */}
         {(item.caption || item.customerName || item.city || item.rating) && (
           <div
             style={{
@@ -726,7 +701,6 @@ function Lightbox({ item, onClose, onPrev, onNext, index, total }) {
           </div>
         )}
 
-        {/* Counter */}
         <div
           style={{
             marginTop: '0.75rem',
