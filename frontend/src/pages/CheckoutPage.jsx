@@ -139,38 +139,9 @@ export default function CheckoutPage() {
 
       if (res.success && res.order) {
         const ord = res.order;
-        const items = Array.isArray(ord.items) ? ord.items : [];
-        const totalQty = items.reduce(
-          (sum, it) => sum + (Number(it.quantity) || 0),
-          0
-        );
 
-        // ===== Meta Pixel: Purchase =====
-        // Fired ONLY after the backend confirms that the order was successfully created.
-        // Uses the order ID as the eventID for Browser + CAPI deduplication.
-        trackEvent(
-          META_EVENTS.PURCHASE,
-          {
-            value: Number(ord.totalAmount) || 0,
-            currency: 'PKR',
-            content_ids: items
-              .map((it) => {
-                const pid = it.product || it._id;
-                return pid ? String(pid) : String(it.name || '');
-              })
-              .filter(Boolean),
-            content_type: 'product',
-            num_items: totalQty
-          },
-          { eventID: ord.orderId }
-        );
-
-        // Store guard in localStorage so confirmation page won't double fire
-        if (typeof window !== 'undefined') {
-          localStorage.setItem(`meta_purchase_${ord.orderId}`, '1');
-          if (formData.phone) {
-            sessionStorage.setItem('last_order_phone', formData.phone);
-          }
+        if (typeof window !== 'undefined' && formData.phone) {
+          sessionStorage.setItem('last_order_phone', formData.phone);
         }
 
         dispatch(clearCart());

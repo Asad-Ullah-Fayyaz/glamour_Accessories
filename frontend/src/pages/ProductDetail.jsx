@@ -313,7 +313,7 @@ export default function ProductDetail() {
             .map((category) => (
               <React.Fragment key={category._id}>
                 <ChevronRight size={12} />
-                <Link to={`/products?category=${category.slug}`}>
+                <Link to={`/products?category=${category._id}`}>
                   {category.name}
                 </Link>
               </React.Fragment>

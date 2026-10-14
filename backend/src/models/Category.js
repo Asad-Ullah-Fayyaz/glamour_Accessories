@@ -65,9 +65,19 @@ categorySchema.index({ parent: 1, level: 1, isActive: 1 });
 // Fast lookup of full tree per L1
 categorySchema.index({ level: 1, parent: 1, createdAt: 1 });
 
+// Category names are unique among siblings, not across the whole tree.
+categorySchema.index(
+  { level: 1, parent: 1, name: 1 },
+  {
+    unique: true,
+    collation: { locale: 'en', strength: 2 },
+    name: 'category_sibling_name_unique'
+  }
+);
+
 // Auto-generate slug from name if not provided
 categorySchema.pre('validate', function (next) {
-  if (this.isModified('name') || !this.slug) {
+  if (!this.slug || (this.isModified('name') && !this.isModified('slug'))) {
     this.slug = slugify(this.name, { lower: true, strict: true });
   }
   next();

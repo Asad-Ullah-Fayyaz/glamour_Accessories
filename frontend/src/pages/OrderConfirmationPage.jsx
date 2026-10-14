@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, Link, useLocation } from 'react-router-dom';
 import {
   CheckCircle,
@@ -17,9 +17,61 @@ export default function OrderConfirmationPage() {
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const orderId = searchParams.get('orderId');
+  const trackedOrderIdsRef = useRef(new Set());
 
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const firePurchasePixel = (ord) => {
+    const targetOrderId = ord?.orderId || orderId;
+    if (!targetOrderId) return;
+
+    if (trackedOrderIdsRef.current.has(targetOrderId)) {
+      return;
+    }
+
+    const guardKey = `meta_purchase_${targetOrderId}`;
+    const hasFbq =
+      typeof window !== 'undefined' && typeof window.fbq === 'function';
+
+    if (hasFbq && typeof window !== 'undefined') {
+      if (localStorage.getItem(guardKey)) {
+        trackedOrderIdsRef.current.add(targetOrderId);
+        return;
+      }
+    }
+
+    if (!hasFbq) return;
+
+    const items = Array.isArray(ord?.items) ? ord.items : [];
+    const totalQty = items.reduce(
+      (sum, it) => sum + (Number(it.quantity) || 0),
+      0
+    );
+
+    trackEvent(
+      META_EVENTS.PURCHASE,
+      {
+        value: Number(ord?.totalAmount) || 0,
+        currency: 'PKR',
+        content_ids: items
+          .map((it) => {
+            const pid = it.product || it._id;
+            return pid ? String(pid) : String(it.name || '');
+          })
+          .filter(Boolean),
+        content_type: 'product',
+        num_items: totalQty
+      },
+      { eventID: targetOrderId }
+    );
+
+    trackedOrderIdsRef.current.add(targetOrderId);
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(guardKey, '1');
+    }
+  };
 
   useEffect(() => {
     const fetchOrderDetails = async () => {
@@ -28,7 +80,8 @@ export default function OrderConfirmationPage() {
         return;
       }
 
-      // 1) Prefer the order passed via navigation state from checkout.
+      // Prefer the order passed via navigation state from checkout only as a UI shortcut.
+      // The actual tracking signal is only fired after the order has been verified by the server.
       const stateOrder =
         location.state &&
         location.state.order &&
@@ -38,82 +91,52 @@ export default function OrderConfirmationPage() {
 
       if (stateOrder) {
         setOrder(stateOrder);
-        firePurchasePixel(stateOrder);
-        setLoading(false);
-        return;
       }
 
-      // 2) Fall back to the private endpoint.
       try {
         const res = await api.get(`/orders/${orderId}`);
         if (res.success && res.order) {
           setOrder(res.order);
           firePurchasePixel(res.order);
+          return;
         }
       } catch (err) {
-        // 3) Last resort: public track endpoint using phone from sessionStorage.
-        try {
-          const savedPhone =
-            typeof window !== 'undefined'
-              ? sessionStorage.getItem('last_order_phone') || ''
-              : '';
+        // public tracking is only used as a fallback when a session-backed order reference exists
+      }
 
-          const trackRes = await api.post('/orders/track', {
-            orderId,
-            emailOrPhone: savedPhone || undefined
-          });
+      try {
+        const savedPhone =
+          typeof window !== 'undefined'
+            ? sessionStorage.getItem('last_order_phone') || ''
+            : '';
 
-          if (trackRes.success && trackRes.tracking) {
-            setOrder({
-              orderId: trackRes.tracking.orderId,
-              status: trackRes.tracking.status,
-              createdAt: trackRes.tracking.createdAt,
-              totalAmount: trackRes.tracking.totalAmount,
-              paymentMethod: trackRes.tracking.paymentMethod,
-              items: [],
-              shippingAddress: { city: trackRes.tracking.cityName }
-            });
-          }
-        } catch (trackErr) {
-          // Fallback UI handles missing order gracefully.
+        if (!savedPhone) {
+          setLoading(false);
+          return;
         }
+
+        const trackRes = await api.post('/orders/track', {
+          orderId,
+          emailOrPhone: savedPhone
+        });
+
+        if (trackRes.success && trackRes.tracking) {
+          const trackedOrder = {
+            orderId: trackRes.tracking.orderId,
+            status: trackRes.tracking.status,
+            createdAt: trackRes.tracking.createdAt,
+            totalAmount: trackRes.tracking.totalAmount,
+            paymentMethod: trackRes.tracking.paymentMethod,
+            items: [],
+            shippingAddress: { city: trackRes.tracking.cityName }
+          };
+          setOrder(trackedOrder);
+          firePurchasePixel(trackedOrder);
+        }
+      } catch (trackErr) {
+        // ignore: no trusted verification, so no Purchase fire
       } finally {
         setLoading(false);
-      }
-    };
-
-    const firePurchasePixel = (ord) => {
-      const targetOrderId = ord.orderId || orderId;
-      if (!targetOrderId) return;
-      const guardKey = `meta_purchase_${targetOrderId}`;
-      if (typeof window !== 'undefined' && localStorage.getItem(guardKey))
-        return;
-
-      const items = Array.isArray(ord.items) ? ord.items : [];
-      const totalQty = items.reduce(
-        (sum, it) => sum + (Number(it.quantity) || 0),
-        0
-      );
-
-      trackEvent(
-        META_EVENTS.PURCHASE,
-        {
-          value: Number(ord.totalAmount) || 0,
-          currency: 'PKR',
-          content_ids: items
-            .map((it) => {
-              const pid = it.product || it._id;
-              return pid ? String(pid) : String(it.name || '');
-            })
-            .filter(Boolean),
-          content_type: 'product',
-          num_items: totalQty
-        },
-        { eventID: targetOrderId }
-      );
-
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(guardKey, '1');
       }
     };
 

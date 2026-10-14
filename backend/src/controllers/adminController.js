@@ -306,7 +306,9 @@ exports.getAdminProducts = async (req, res, next) => {
     const query = {};
 
     if (category && category !== 'All') {
-      const catObj = await Category.findOne({ slug: category }).select('_id level');
+      const catObj = /^[a-f\d]{24}$/i.test(category)
+        ? await Category.findById(category).select('_id level')
+        : await Category.findOne({ slug: category }).select('_id level');
       if (!catObj) {
         return res.status(200).json({
           success: true,
@@ -406,29 +408,42 @@ exports.getProductCountsByCategory = async (req, res, next) => {
       }
     ]);
 
-    const categories = await Category.find().select('_id slug name');
+    const categories = await Category.find().select('_id parent slug');
+    const directCounts = new Map(
+      counts.map((row) => [row._id?.toString(), row.count])
+    );
+    const childrenByParent = new Map();
+    categories.forEach((category) => {
+      const parentId = category.parent?.toString() || null;
+      if (!childrenByParent.has(parentId)) childrenByParent.set(parentId, []);
+      childrenByParent.get(parentId).push(category._id.toString());
+    });
 
-    const bySlug = {};
+    const byCategory = {};
     let totalAll = 0;
 
-    for (const cat of categories) {
-      bySlug[cat.slug] = 0;
-    }
+    counts.forEach((row) => {
+      totalAll += row.count;
+    });
 
-    for (const c of counts) {
-      totalAll += c.count;
-      const match = categories.find(
-        (cat) => cat._id.toString() === c._id?.toString()
+    const countBranch = (categoryId) => {
+      const ownCount = directCounts.get(categoryId) || 0;
+      const descendantsCount = (childrenByParent.get(categoryId) || []).reduce(
+        (sum, childId) => sum + countBranch(childId),
+        0
       );
-      if (match) {
-        bySlug[match.slug] = c.count;
-      }
-    }
+      return ownCount + descendantsCount;
+    };
+    categories.forEach((category) => {
+      const count = countBranch(category._id.toString());
+      byCategory[category._id.toString()] = count;
+      byCategory[category.slug] = count;
+    });
 
     res.status(200).json({
       success: true,
       all: totalAll,
-      byCategory: bySlug
+      byCategory
     });
   } catch (error) {
     next(error);

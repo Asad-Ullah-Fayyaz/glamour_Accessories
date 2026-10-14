@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const net = require('net');
 const axios = require('axios');
 const logger = require('../utils/logger');
 const { config } = require('../config/env');
@@ -28,6 +29,49 @@ function normalizePhone(phone) {
 }
 
 /**
+ * Use Express's client IP after its configured proxy trust chain is applied.
+ * Do not read forwarding headers directly: clients can supply spoofed values.
+ */
+function getTrustedClientIp(req) {
+  const clientIp = req?.ip;
+  if (typeof clientIp !== 'string' || !clientIp || !net.isIP(clientIp)) return '';
+
+  const lowerCaseIp = clientIp.toLowerCase();
+  const normalized = lowerCaseIp.startsWith('::ffff:')
+    ? lowerCaseIp.replace(/^::ffff:/, '')
+    : lowerCaseIp;
+
+  if (
+    normalized === '::1' ||
+    normalized === '::' ||
+    normalized === '0.0.0.0' ||
+    normalized === '127.0.0.1' ||
+    normalized.startsWith('0.') ||
+    normalized.startsWith('10.') ||
+    /^192\.168\./.test(normalized) ||
+    /^169\.254\./.test(normalized) ||
+    /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(normalized) ||
+    /^100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\./.test(normalized) ||
+    /^192\.0\.2\./.test(normalized) ||
+    /^198\.51\.100\./.test(normalized) ||
+    /^203\.0\.113\./.test(normalized) ||
+    /^22[4-9]\./.test(normalized) ||
+    /^23[0-9]\./.test(normalized) ||
+    /^24[0-9]\./.test(normalized) ||
+    /^25[0-5]\./.test(normalized) ||
+    normalized.startsWith('fc') ||
+    normalized.startsWith('fd') ||
+    /^fe[89ab]/.test(normalized) ||
+    normalized.startsWith('ff') ||
+    normalized.startsWith('2001:db8:')
+  ) {
+    return '';
+  }
+
+  return normalized;
+}
+
+/**
  * Send a Purchase event to Meta Conversions API (CAPI).
  * Non-blocking operation — fails gracefully without interrupting order creation.
  */
@@ -46,11 +90,7 @@ async function sendCapiPurchaseEvent({
       return;
     }
 
-    const clientIp =
-      req?.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
-      req?.ip ||
-      req?.socket?.remoteAddress ||
-      '';
+    const clientIp = getTrustedClientIp(req);
 
     const userAgent = req?.headers['user-agent'] || '';
 
@@ -75,7 +115,7 @@ async function sendCapiPurchaseEvent({
       st: state ? [hashValue(state)] : undefined,
       zp: postalCode ? [hashValue(postalCode)] : undefined,
       country: country ? [hashValue(country === 'Pakistan' ? 'pk' : country)] : undefined,
-      client_ip_address: clientIp,
+      client_ip_address: clientIp || undefined,
       client_user_agent: userAgent,
       fbp: fbp || req?.cookies?._fbp || undefined,
       fbc: fbc || req?.cookies?._fbc || undefined
@@ -90,13 +130,15 @@ async function sendCapiPurchaseEvent({
     const contentIds = items.map((it) => String(it.product || it._id || ''));
     const totalQty = items.reduce((sum, it) => sum + (Number(it.quantity) || 0), 0);
 
+    const orderConfirmationUrl = `${config.frontendUrl}/order-confirmation?orderId=${encodeURIComponent(order.orderId)}`;
+
     const eventPayload = {
       data: [
         {
           event_name: 'Purchase',
           event_time: Math.floor(Date.now() / 1000),
           event_id: order.orderId,
-          event_source_url: `${config.frontendUrl}/checkout`,
+          event_source_url: orderConfirmationUrl,
           action_source: 'website',
           user_data: userData,
           custom_data: {
@@ -131,6 +173,7 @@ async function sendCapiPurchaseEvent({
 
 module.exports = {
   sendCapiPurchaseEvent,
+  getTrustedClientIp,
   hashValue,
   normalizePhone
 };

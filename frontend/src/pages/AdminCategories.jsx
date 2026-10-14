@@ -58,9 +58,38 @@ export default function AdminCategories() {
     return walk(tree) || [];
   };
 
-  const createCategory = async (event, payload, successMessage, reset) => {
+  const categoryById = (nodes, id) => {
+    for (const node of nodes) {
+      if (node._id === id) return node;
+      const found = categoryById(node.children || [], id);
+      if (found) return found;
+    }
+    return null;
+  };
+
+  const createCategory = async (
+    event,
+    payload,
+    successMessage,
+    reset,
+    expectedParentLevel = null,
+    parentScopeId = null
+  ) => {
     event.preventDefault();
     setErrorMsg('');
+    if (expectedParentLevel) {
+      const parent = categoryById(tree, payload.parent);
+      const belongsToSelectedBranch =
+        !parentScopeId || childrenOf(parentScopeId).some((child) => child._id === payload.parent);
+      if (
+        !parent ||
+        parent.level !== expectedParentLevel ||
+        !belongsToSelectedBranch
+      ) {
+        setErrorMsg('Please select a valid parent from the current category branch.');
+        return;
+      }
+    }
     try {
       await api.post('/categories', payload);
       reset();
@@ -162,7 +191,7 @@ export default function AdminCategories() {
     </React.Fragment>
   );
 
-  const l3Options = childrenOf(l3ParentL1);
+  const l3Options = childrenOf(l3ParentL1).filter((category) => category.level === 2);
 
   // Find the currently selected L1 node (for the image preview)
   const selectedL1Node = tree.find((cat) => cat._id === imageTargetL1) || null;
@@ -306,18 +335,18 @@ export default function AdminCategories() {
                 EXISTING: Three creation forms (untouched)
                 ============================================================ */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
-              <Form title="Main Categories (L1)" onSubmit={(event) => createCategory(event, { name: l1Name.trim(), description: l1Description.trim() }, 'Level 1 category created', () => { setL1Name(''); setL1Description(''); })}>
+              <Form title="Main Categories (L1)" onSubmit={(event) => createCategory(event, { name: l1Name.trim(), description: l1Description.trim(), level: 1 }, 'Level 1 category created', () => { setL1Name(''); setL1Description(''); })}>
                 <input className="form-input" required placeholder="Name" value={l1Name} onChange={(event) => setL1Name(event.target.value)} />
                 <input className="form-input" placeholder="Description (optional)" value={l1Description} onChange={(event) => setL1Description(event.target.value)} />
                 <button className="btn btn-primary" type="submit"><Plus size={14} /> Create L1</button>
               </Form>
-              <Form title="Subcategories (L2)" onSubmit={(event) => createCategory(event, { name: l2Name.trim(), parent: l2Parent }, 'Level 2 category created', () => { setL2Name(''); })}>
-                <select className="form-select" required value={l2Parent} onChange={(event) => setL2Parent(event.target.value)}><option value="">Choose L1 parent...</option>{tree.map((category) => <option key={category._id} value={category._id}>{category.name}</option>)}</select>
+              <Form title="Subcategories (L2)" onSubmit={(event) => createCategory(event, { name: l2Name.trim(), parent: l2Parent, level: 2 }, 'Level 2 category created', () => { setL2Name(''); }, 1)}>
+                <select className="form-select" required value={l2Parent} onChange={(event) => setL2Parent(event.target.value)}><option value="">Choose L1 parent...</option>{tree.filter((category) => category.level === 1).map((category) => <option key={category._id} value={category._id}>{category.name}</option>)}</select>
                 <input className="form-input" required placeholder="Name" value={l2Name} onChange={(event) => setL2Name(event.target.value)} />
                 <button className="btn btn-primary" type="submit"><Plus size={14} /> Create L2</button>
               </Form>
-              <Form title="Sub-Sub-Categories (L3)" onSubmit={(event) => createCategory(event, { name: l3Name.trim(), parent: l3ParentL2 }, 'Level 3 category created', () => { setL3Name(''); })}>
-                <select className="form-select" required value={l3ParentL1} onChange={(event) => { setL3ParentL1(event.target.value); setL3ParentL2(''); }}><option value="">Choose L1 parent...</option>{tree.map((category) => <option key={category._id} value={category._id}>{category.name}</option>)}</select>
+              <Form title="Sub-Sub-Categories (L3)" onSubmit={(event) => createCategory(event, { name: l3Name.trim(), parent: l3ParentL2, level: 3 }, 'Level 3 category created', () => { setL3Name(''); }, 2, l3ParentL1)}>
+                <select className="form-select" required value={l3ParentL1} onChange={(event) => { setL3ParentL1(event.target.value); setL3ParentL2(''); }}><option value="">Choose L1 parent...</option>{tree.filter((category) => category.level === 1).map((category) => <option key={category._id} value={category._id}>{category.name}</option>)}</select>
                 <select className="form-select" required disabled={!l3ParentL1} value={l3ParentL2} onChange={(event) => setL3ParentL2(event.target.value)}><option value="">Choose L2 parent...</option>{l3Options.map((category) => <option key={category._id} value={category._id}>{category.name}</option>)}</select>
                 <input className="form-input" required placeholder="Name" value={l3Name} onChange={(event) => setL3Name(event.target.value)} />
                 <button className="btn btn-primary" type="submit"><Plus size={14} /> Create L3</button>

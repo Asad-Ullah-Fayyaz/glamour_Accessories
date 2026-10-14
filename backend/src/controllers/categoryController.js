@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Category = require('../models/Category');
 const Product = require('../models/Product');
 const slugify = require('slugify');
@@ -5,6 +6,8 @@ const slugify = require('slugify');
 // -------------------------------------------------------------------------
 // Helpers
 // -------------------------------------------------------------------------
+
+const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 // Validate a proposed parent for a new/updated category.
 // Returns null if OK, or an error string.
@@ -48,6 +51,61 @@ const generateUniqueSlug = async (baseSlug, excludeId = null) => {
     }
   }
   return slug;
+};
+
+const findSiblingName = async (name, level, parentId, excludeId = null) => {
+  const query = {
+    level,
+    parent: parentId || null,
+    name: new RegExp(`^${escapeRegex(name.trim())}$`, 'i'),
+    ...(excludeId ? { _id: { $ne: excludeId } } : {})
+  };
+  return Category.findOne(query);
+};
+
+const isSiblingNameDuplicate = (error) => {
+  if (error.code !== 11000) return false;
+  const pattern = error.keyPattern || {};
+  return (
+    JSON.stringify(Object.keys(pattern).sort()) ===
+      JSON.stringify(['level', 'name', 'parent']) ||
+    /index:\s+category_sibling_name_unique\b/.test(error.message || '')
+  );
+};
+
+const isSlugDuplicate = (error) =>
+  error.code === 11000 &&
+  ((error.keyPattern && Object.keys(error.keyPattern).length === 1 && error.keyPattern.slug) ||
+    (error.keyValue && Object.keys(error.keyValue).length === 1 && error.keyValue.slug) ||
+    /index:\s+slug_1\b/.test(error.message || ''));
+
+const createWithUniqueSlug = async (categoryData) => {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    categoryData.slug = await generateUniqueSlug(
+      slugify(categoryData.name, { lower: true, strict: true })
+    );
+    try {
+      // The global slug index remains for compatibility with existing slug URLs.
+      // eslint-disable-next-line no-await-in-loop
+      return await Category.create(categoryData);
+    } catch (error) {
+      if (!isSlugDuplicate(error) || attempt === 4) throw error;
+    }
+  }
+  throw new Error('Unable to generate a unique category slug');
+};
+
+const saveWithUniqueSlug = async (category, baseSlug) => {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    category.slug = await generateUniqueSlug(baseSlug, category._id);
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      return await category.save();
+    } catch (error) {
+      if (!isSlugDuplicate(error) || attempt === 4) throw error;
+    }
+  }
+  throw new Error('Unable to generate a unique category slug');
 };
 
 // Build a recursive tree from a flat list of categories.
@@ -148,7 +206,7 @@ exports.getCategoryBySlug = async (req, res, next) => {
 // - Parent L2  → L3
 exports.createCategory = async (req, res, next) => {
   try {
-    const { name, description, image, parent } = req.body;
+    const { name, description, image, parent, level: requestedLevel } = req.body;
 
     if (!name || !name.trim()) {
       return res.status(400).json({ success: false, message: 'Category name is required' });
@@ -159,6 +217,12 @@ exports.createCategory = async (req, res, next) => {
     let parentId = null;
 
     if (parent) {
+      if (!mongoose.isValidObjectId(parent)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Parent must be a valid category id'
+        });
+      }
       const parentDoc = await Category.findById(parent);
       if (!parentDoc) {
         return res.status(404).json({ success: false, message: 'Parent category not found' });
@@ -173,17 +237,36 @@ exports.createCategory = async (req, res, next) => {
       parentId = parentDoc._id;
     }
 
+    if (requestedLevel !== undefined && Number(requestedLevel) !== level) {
+      let expectedParentMessage;
+      if (Number(requestedLevel) === 1) {
+        expectedParentMessage = 'Level 1 categories cannot have a parent';
+      } else if (!parentId) {
+        expectedParentMessage = `Level ${requestedLevel} categories require a parent category`;
+      } else {
+        expectedParentMessage = `Level ${requestedLevel} categories must have a Level ${Number(requestedLevel) - 1} parent`;
+      }
+      return res.status(400).json({
+        success: false,
+        message: expectedParentMessage
+      });
+    }
+
     const parentError = await validateParent(parentId, level);
     if (parentError) {
       return res.status(400).json({ success: false, message: parentError });
     }
 
-    const baseSlug = slugify(name, { lower: true, strict: true });
-    const slug = await generateUniqueSlug(baseSlug);
+    const normalizedName = name.trim();
+    if (await findSiblingName(normalizedName, level, parentId)) {
+      return res.status(409).json({
+        success: false,
+        message: `A category named "${normalizedName}" already exists under this parent`
+      });
+    }
 
-    const category = await Category.create({
-      name: name.trim(),
-      slug,
+    const category = await createWithUniqueSlug({
+      name: normalizedName,
       description: typeof description === 'string' ? description.trim() : '',
       image: typeof image === 'string' ? image : '',
       parent: parentId,
@@ -192,6 +275,18 @@ exports.createCategory = async (req, res, next) => {
 
     res.status(201).json({ success: true, category });
   } catch (error) {
+    if (isSiblingNameDuplicate(error)) {
+      return res.status(409).json({
+        success: false,
+        message: 'A category with this name already exists under this parent'
+      });
+    }
+    if (isSlugDuplicate(error)) {
+      return res.status(409).json({
+        success: false,
+        message: 'Unable to generate a unique category URL. Please try again.'
+      });
+    }
     next(error);
   }
 };
@@ -205,30 +300,47 @@ exports.createCategory = async (req, res, next) => {
 exports.updateCategory = async (req, res, next) => {
   try {
     const { name, description, image, isActive } = req.body;
-    const updateData = {};
-
-    if (name && name.trim()) {
-      updateData.name = name.trim();
-      updateData.slug = await generateUniqueSlug(
-        slugify(name, { lower: true, strict: true }),
-        req.params.id
-      );
-    }
-    if (description !== undefined) updateData.description = String(description).trim();
-    if (image !== undefined) updateData.image = String(image);
-    if (isActive !== undefined) updateData.isActive = Boolean(isActive);
-
-    const category = await Category.findByIdAndUpdate(req.params.id, updateData, {
-      new: true,
-      runValidators: true
-    });
-
+    const category = await Category.findById(req.params.id);
     if (!category) {
       return res.status(404).json({ success: false, message: 'Category not found' });
     }
 
+    let slugBase = null;
+    if (name && name.trim()) {
+      const normalizedName = name.trim();
+      if (await findSiblingName(normalizedName, category.level, category.parent, category._id)) {
+        return res.status(409).json({
+          success: false,
+          message: `A category named "${normalizedName}" already exists under this parent`
+        });
+      }
+      category.name = normalizedName;
+      slugBase = slugify(normalizedName, { lower: true, strict: true });
+    }
+    if (description !== undefined) category.description = String(description).trim();
+    if (image !== undefined) category.image = String(image);
+    if (isActive !== undefined) category.isActive = Boolean(isActive);
+
+    if (slugBase) {
+      await saveWithUniqueSlug(category, slugBase);
+    } else {
+      await category.save();
+    }
+
     res.status(200).json({ success: true, category });
   } catch (error) {
+    if (isSiblingNameDuplicate(error)) {
+      return res.status(409).json({
+        success: false,
+        message: 'A category with this name already exists under this parent'
+      });
+    }
+    if (isSlugDuplicate(error)) {
+      return res.status(409).json({
+        success: false,
+        message: 'Unable to generate a unique category URL. Please try again.'
+      });
+    }
     next(error);
   }
 };

@@ -5,6 +5,10 @@ const errorHandler = (err, req, res, next) => {
   logger.error(`Unhandled error on ${req.method} ${req.originalUrl}`, {
     name: err.name,
     message: err.message,
+    ...(err.code === 11000 && {
+      index: err.index || err.message?.match(/index:\s+([^\s]+)/)?.[1],
+      keyPattern: err.keyPattern
+    }),
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
   });
 
@@ -15,8 +19,19 @@ const errorHandler = (err, req, res, next) => {
 
   // Mongoose duplicate key
   if (err.code === 11000) {
-    const field = Object.keys(err.keyValue || {})[0] || 'field';
-    return res.status(400).json({
+    const keyPattern = err.keyPattern || {};
+    if (
+      JSON.stringify(Object.keys(keyPattern).sort()) ===
+        JSON.stringify(['level', 'name', 'parent']) ||
+      /index:\s+category_sibling_name_unique\b/.test(err.message || '')
+    ) {
+      return res.status(409).json({
+        success: false,
+        message: 'A category with this name already exists under this parent'
+      });
+    }
+    const field = Object.keys(keyPattern)[0] || Object.keys(err.keyValue || {})[0] || 'field';
+    return res.status(409).json({
       success: false,
       message: `A record with this ${field.replace(/([A-Z])/g, ' $1').toLowerCase()} already exists`
     });

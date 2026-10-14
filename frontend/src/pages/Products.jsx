@@ -126,6 +126,15 @@ export default function Products() {
     return pages;
   };
 
+  const findCategoryById = (nodes, id) => {
+    for (const node of nodes) {
+      if (node._id === id) return node;
+      const found = findCategoryById(node.children || [], id);
+      if (found) return found;
+    }
+    return null;
+  };
+
   const findCategoryBySlug = (nodes, slug) => {
     for (const node of nodes) {
       if (node.slug === slug) return node;
@@ -135,7 +144,11 @@ export default function Products() {
     return null;
   };
 
-  const activeCategoryObj = findCategoryBySlug(categories, categoryParam);
+  const activeCategoryObj =
+    findCategoryById(categories, categoryParam) || findCategoryBySlug(categories, categoryParam);
+  const hasSelectedCategory = (category) =>
+    activeCategoryObj?._id === category._id ||
+    category.children?.some((child) => hasSelectedCategory(child));
   const hasActiveFilters =
     categoryParam || searchParam || minPrice || maxPrice || inStockParam;
 
@@ -321,12 +334,12 @@ export default function Products() {
                 {categories.map((cat) => (
                   <div key={cat._id}>
                     <button
-                      onClick={() => updateParams({ category: cat.slug })}
+                      onClick={() => updateParams({ category: cat._id })}
                       style={{
                         textAlign: 'left',
                         width: '100%',
-                        fontWeight: categoryParam === cat.slug ? 700 : 400,
-                        color: categoryParam === cat.slug ? '#000000' : '#444444',
+                        fontWeight: activeCategoryObj?._id === cat._id ? 700 : 400,
+                        color: activeCategoryObj?._id === cat._id ? '#000000' : '#444444',
                         background: 'none',
                         border: 'none',
                         cursor: 'pointer'
@@ -335,9 +348,7 @@ export default function Products() {
                       {cat.name}
                     </button>
 
-                    {(categoryParam === cat.slug || cat.children?.some((child) =>
-                      child.slug === categoryParam || child.children?.some((grandchild) => grandchild.slug === categoryParam)
-                    )) && cat.children && cat.children.length > 0 && (
+                    {hasSelectedCategory(cat) && cat.children && cat.children.length > 0 && (
                         <div
                           style={{
                             paddingLeft: '1rem',
@@ -350,15 +361,15 @@ export default function Products() {
                           {cat.children.map((l2) => (
                             <div key={l2._id}>
                               <button
-                                onClick={() => updateParams({ category: l2.slug })}
-                                style={{ textAlign: 'left', fontSize: '0.8rem', fontWeight: categoryParam === l2.slug ? 700 : 400, color: categoryParam === l2.slug ? '#000000' : '#767676', background: 'none', border: 'none', cursor: 'pointer' }}
+                                onClick={() => updateParams({ category: l2._id })}
+                                style={{ textAlign: 'left', fontSize: '0.8rem', fontWeight: activeCategoryObj?._id === l2._id ? 700 : 400, color: activeCategoryObj?._id === l2._id ? '#000000' : '#767676', background: 'none', border: 'none', cursor: 'pointer' }}
                               >
                                 &bull; {l2.name}
                               </button>
-                              {((categoryParam === l2.slug) || l2.children?.some((l3) => l3.slug === categoryParam)) && l2.children?.length > 0 && (
+                              {hasSelectedCategory(l2) && l2.children?.length > 0 && (
                                 <div style={{ paddingLeft: '1.5rem', marginTop: '0.35rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                                   {l2.children.map((l3) => (
-                                    <button key={l3._id} onClick={() => updateParams({ category: l3.slug })} style={{ textAlign: 'left', fontSize: '0.78rem', fontWeight: categoryParam === l3.slug ? 700 : 400, color: categoryParam === l3.slug ? '#000000' : '#767676', background: 'none', border: 'none', cursor: 'pointer' }}>
+                                    <button key={l3._id} onClick={() => updateParams({ category: l3._id })} style={{ textAlign: 'left', fontSize: '0.78rem', fontWeight: activeCategoryObj?._id === l3._id ? 700 : 400, color: activeCategoryObj?._id === l3._id ? '#000000' : '#767676', background: 'none', border: 'none', cursor: 'pointer' }}>
                                       – {l3.name}
                                     </button>
                                   ))}
@@ -367,7 +378,7 @@ export default function Products() {
                             </div>
                           ))}
                         </div>
-                      )}
+                    )}
                   </div>
                 ))}
               </div>

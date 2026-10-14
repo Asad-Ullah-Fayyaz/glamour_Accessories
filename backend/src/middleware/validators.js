@@ -378,6 +378,12 @@ const categoryRules = [
     .trim()
     .isString()
     .isLength({ max: 2048 }),
+  body("level")
+    .optional()
+    .isInt({ min: 1, max: 3 })
+    .withMessage("Category level must be 1, 2, or 3")
+    .bail()
+    .toInt(),
   body("parent")
     .optional({ checkFalsy: true })
     .isMongoId()

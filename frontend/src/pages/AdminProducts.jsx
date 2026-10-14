@@ -82,12 +82,12 @@ export default function AdminProducts() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search]);
 
-  const handleCategoryClick = (slug) => {
+  const handleCategoryClick = (categoryId) => {
     const newParams = new URLSearchParams(searchParams);
-    if (slug === 'All') {
+    if (categoryId === 'All') {
       newParams.delete('category');
     } else {
-      newParams.set('category', slug);
+      newParams.set('category', categoryId);
     }
     setSearchParams(newParams);
     setSearch(''); // clear search when switching categories
@@ -195,9 +195,9 @@ export default function AdminProducts() {
             <TabButton
               key={cat._id}
               label={cat.name}
-              count={counts.byCategory[cat.slug] || 0}
-              active={categoryParam === cat.slug}
-              onClick={() => handleCategoryClick(cat.slug)}
+              count={counts.byCategory[cat._id] || 0}
+              active={categoryParam === cat._id}
+              onClick={() => handleCategoryClick(cat._id)}
             />
           ))}
         </div>
@@ -264,7 +264,7 @@ export default function AdminProducts() {
           ) : products.length === 0 ? (
             <div style={{ padding: '4rem 1rem', textAlign: 'center', color: 'var(--text-muted)' }}>
               {categoryParam !== 'All'
-                ? `No products in "${categories.find((c) => c.slug === categoryParam)?.name || categoryParam}"${search ? ' matching your search' : ''}.`
+                ? `No products in "${categories.find((c) => c._id === categoryParam)?.name || categoryParam}"${search ? ' matching your search' : ''}.`
                 : search
                 ? `No products matching "${search}".`
                 : 'No products found in catalog.'}

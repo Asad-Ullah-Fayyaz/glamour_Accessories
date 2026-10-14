@@ -30,6 +30,7 @@ Thumbs.db
 
 # Uploads (user content)
 backend/uploads/
+backend/backups/
 backend/superAdmin.txt
 backend/hostinger-recovery-codes.txt
 
