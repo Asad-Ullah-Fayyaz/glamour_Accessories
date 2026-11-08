@@ -74,7 +74,7 @@ const sendOrderConfirmationEmail = async (order) => {
     const htmlContent = `
       <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #111;">
         <div style="background-color: #0d0d0d; padding: 25px; text-align: center; color: #fff;">
-          <h1 style="margin: 0; font-size: 24px; letter-spacing: 3px;">AXI COLLECTION</h1>
+          <h1 style="margin: 0; font-size: 24px; letter-spacing: 3px;">Glamour Accessories</h1>
           <p style="margin: 5px 0 0 0; font-size: 12px; letter-spacing: 1px; color: #888;">ORDER CONFIRMATION</p>
         </div>
         <div style="padding: 30px; background-color: #fafafa; border: 1px solid #eee;">
@@ -116,14 +116,14 @@ const sendOrderConfirmationEmail = async (order) => {
           </p>
         </div>
         <div style="text-align: center; padding: 20px; font-size: 12px; color: #888;">
-          © ${new Date().getFullYear()} AXI Collection. All rights reserved.
+          © ${new Date().getFullYear()} Glamour Accessories. All rights reserved.
         </div>
       </div>
     `;
 
     await sendMailSafe({
       to: order.customerEmail,
-      subject: `Order Confirmation — ${order.orderId} | AXI Collection`,
+      subject: `Order Confirmation — ${order.orderId} | Glamour Accessories`,
       html: htmlContent,
       label: 'Order Confirmation',
       orderId: order.orderId
@@ -137,7 +137,7 @@ const sendTrackingEmail = async (order) => {
     const htmlContent = `
       <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #111;">
         <div style="background-color: #0d0d0d; padding: 25px; text-align: center; color: #fff;">
-          <h1 style="margin: 0; font-size: 24px; letter-spacing: 3px;">AXI COLLECTION</h1>
+          <h1 style="margin: 0; font-size: 24px; letter-spacing: 3px;">Glamour Accessories</h1>
           <p style="margin: 5px 0 0 0; font-size: 12px; letter-spacing: 1px; color: #888;">SHIPMENT TRACKING UPDATE</p>
         </div>
         <div style="padding: 30px; background-color: #fafafa; border: 1px solid #eee;">
@@ -161,14 +161,14 @@ const sendTrackingEmail = async (order) => {
           </div>
         </div>
         <div style="text-align: center; padding: 20px; font-size: 12px; color: #888;">
-          © ${new Date().getFullYear()} AXI Collection. All rights reserved.
+          © ${new Date().getFullYear()} Glamour Accessories. All rights reserved.
         </div>
       </div>
     `;
 
     await sendMailSafe({
       to: order.customerEmail,
-      subject: `Shipment Dispatch & Courier Tracking — ${order.orderId} | AXI Collection`,
+      subject: `Shipment Dispatch & Courier Tracking — ${order.orderId} | Glamour Accessories`,
       html: htmlContent,
       label: 'Shipment Tracking',
       orderId: order.orderId
@@ -182,12 +182,12 @@ const sendPasswordResetEmail = async (user, rawToken) => {
   const htmlContent = `
       <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #111;">
         <div style="background-color: #0d0d0d; padding: 25px; text-align: center; color: #fff;">
-          <h1 style="margin: 0; font-size: 24px; letter-spacing: 3px;">AXI COLLECTION</h1>
+          <h1 style="margin: 0; font-size: 24px; letter-spacing: 3px;">Glamour Accessories</h1>
           <p style="margin: 5px 0 0 0; font-size: 12px; letter-spacing: 1px; color: #888;">PASSWORD RESET</p>
         </div>
         <div style="padding: 30px; background-color: #fafafa; border: 1px solid #eee;">
           <h2>Hello ${escapeHtml(user.name)},</h2>
-          <p>We received a request to reset your AXI Collection account password.</p>
+          <p>We received a request to reset your Glamour Accessories account password.</p>
           <p>This link is valid for <strong>30 minutes</strong> and can only be used once.</p>
           <div style="text-align: center; margin: 30px 0;">
             <a href="${resetUrl}"
@@ -198,14 +198,14 @@ const sendPasswordResetEmail = async (user, rawToken) => {
           <p style="font-size: 12px; color: #888;">If you did not request this, you can safely ignore this email — your password will not change.</p>
         </div>
         <div style="text-align: center; padding: 20px; font-size: 12px; color: #888;">
-          © ${new Date().getFullYear()} AXI Collection. All rights reserved.
+          © ${new Date().getFullYear()} Glamour Accessories. All rights reserved.
         </div>
       </div>
     `;
 
   await sendMailSafe({
     to: user.email,
-    subject: 'Password Reset Request | AXI Collection',
+    subject: 'Password Reset Request | Glamour Accessories',
     html: htmlContent,
     label: 'Password Reset'
   });
