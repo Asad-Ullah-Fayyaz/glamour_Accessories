@@ -11,7 +11,14 @@ import {
   Sparkles
 } from 'lucide-react';
 import api from '../services/api';
-import { trackEvent, META_EVENTS } from '../services/metaPixel';
+import {
+  claimPurchaseEvent,
+  getMetaTrackingConsent,
+  buildBrowserPurchase,
+  hasMetaTrackingConsent,
+  trackEvent,
+  META_EVENTS
+} from '../services/metaPixel';
 
 export default function OrderConfirmationPage() {
   const [searchParams] = useSearchParams();
@@ -20,58 +27,38 @@ export default function OrderConfirmationPage() {
   const trackedOrderIdsRef = useRef(new Set());
 
   const [order, setOrder] = useState(null);
+  const [verifiedOrder, setVerifiedOrder] = useState(null);
+  const [trackingConsent, setTrackingConsent] = useState(() => getMetaTrackingConsent());
   const [loading, setLoading] = useState(true);
 
   const firePurchasePixel = (ord) => {
-    const targetOrderId = ord?.orderId || orderId;
-    if (!targetOrderId) return;
+    if (!hasMetaTrackingConsent()) return;
+    const purchase = buildBrowserPurchase(ord);
+    if (!purchase || trackedOrderIdsRef.current.has(purchase.eventID)) return;
+    if (!claimPurchaseEvent(purchase.eventID)) return;
 
-    if (trackedOrderIdsRef.current.has(targetOrderId)) {
-      return;
-    }
-
-    const guardKey = `meta_purchase_${targetOrderId}`;
-    const hasFbq =
-      typeof window !== 'undefined' && typeof window.fbq === 'function';
-
-    if (hasFbq && typeof window !== 'undefined') {
-      if (localStorage.getItem(guardKey)) {
-        trackedOrderIdsRef.current.add(targetOrderId);
-        return;
-      }
-    }
-
-    if (!hasFbq) return;
-
-    const items = Array.isArray(ord?.items) ? ord.items : [];
-    const totalQty = items.reduce(
-      (sum, it) => sum + (Number(it.quantity) || 0),
-      0
-    );
+    trackedOrderIdsRef.current.add(purchase.eventID);
 
     trackEvent(
       META_EVENTS.PURCHASE,
-      {
-        value: Number(ord?.totalAmount) || 0,
-        currency: 'PKR',
-        content_ids: items
-          .map((it) => {
-            const pid = it.product || it._id;
-            return pid ? String(pid) : String(it.name || '');
-          })
-          .filter(Boolean),
-        content_type: 'product',
-        num_items: totalQty
-      },
-      { eventID: targetOrderId }
+      purchase.params,
+      { eventID: purchase.eventID }
     );
-
-    trackedOrderIdsRef.current.add(targetOrderId);
-
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(guardKey, '1');
-    }
   };
+
+  useEffect(() => {
+    const syncConsent = () => setTrackingConsent(getMetaTrackingConsent());
+    window.addEventListener('meta-tracking-consent-change', syncConsent);
+    return () => {
+      window.removeEventListener('meta-tracking-consent-change', syncConsent);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (trackingConsent === 'granted' && verifiedOrder) {
+      firePurchasePixel(verifiedOrder);
+    }
+  }, [trackingConsent, verifiedOrder]);
 
   useEffect(() => {
     const fetchOrderDetails = async () => {
@@ -97,7 +84,7 @@ export default function OrderConfirmationPage() {
         const res = await api.get(`/orders/${orderId}`);
         if (res.success && res.order) {
           setOrder(res.order);
-          firePurchasePixel(res.order);
+          setVerifiedOrder(res.order);
           return;
         }
       } catch (err) {
@@ -131,7 +118,10 @@ export default function OrderConfirmationPage() {
             shippingAddress: { city: trackRes.tracking.cityName }
           };
           setOrder(trackedOrder);
-          firePurchasePixel(trackedOrder);
+          setVerifiedOrder({
+            ...trackedOrder,
+            items: trackRes.tracking.items
+          });
         }
       } catch (trackErr) {
         // ignore: no trusted verification, so no Purchase fire

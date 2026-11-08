@@ -26,6 +26,7 @@ import ReviewSection from '../components/product/ReviewSection';
 import TrustCarousel from '../components/product/TrustCarousel';
 import api from '../services/api';
 import { trackEvent, META_EVENTS } from '../services/metaPixel';
+import { getProductTrackingPrice } from '../services/metaTracking';
 
 export default function ProductDetail() {
   const dispatch = useDispatch();
@@ -98,10 +99,13 @@ export default function ProductDetail() {
     if (!product || !product._id) return;
     if (lastTrackedProductId.current === product._id) return;
 
+    const value = getProductTrackingPrice(product);
+    if (value === null) return;
+
     lastTrackedProductId.current = product._id;
 
     trackEvent(META_EVENTS.VIEW_CONTENT, {
-      value: Number(product.isOnSale ? product.salePrice : product.price) || 0,
+      value,
       currency: 'PKR',
       content_ids: [String(product._id)],
       content_name: product.name || '',

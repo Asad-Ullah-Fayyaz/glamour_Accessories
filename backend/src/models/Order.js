@@ -115,6 +115,37 @@ const orderSchema = new mongoose.Schema({
     default: 'Pending',
     index: true
   },
+  metaPurchaseStatus: {
+    type: String,
+    enum: ['processing', 'succeeded', 'failed'],
+    default: undefined
+  },
+  metaPurchaseAttempts: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  metaPurchaseLockedAt: {
+    type: Date,
+    default: undefined
+  },
+  metaPurchaseClaimToken: {
+    type: String,
+    default: undefined
+  },
+  metaPurchaseNextAttemptAt: {
+    type: Date,
+    default: undefined
+  },
+  metaPurchaseLastError: {
+    type: String,
+    default: undefined,
+    maxlength: 120
+  },
+  metaPurchaseAcceptedAt: {
+    type: Date,
+    default: undefined
+  },
   courierInfo: {
     carrier: { type: String, default: '' },
     trackingId: { type: String, default: '', index: true },

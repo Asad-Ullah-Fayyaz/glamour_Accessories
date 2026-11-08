@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search, Truck, Clock, CheckCircle2, PackageCheck, AlertCircle } from 'lucide-react';
 import api from '../services/api';
@@ -12,12 +12,6 @@ export default function TrackOrder() {
   const [trackingData, setTrackingData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-
-  useEffect(() => {
-    if (initialOrderId) {
-      handleTrackLookup(initialOrderId);
-    }
-  }, [initialOrderId]);
 
   const handleTrackLookup = async (idToSearch) => {
     const targetId = idToSearch || orderId;
@@ -80,12 +74,13 @@ export default function TrackOrder() {
               />
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">Email or Phone Number (Optional Verification)</label>
+              <label className="form-label">Email or Phone Number *</label>
               <input 
                 type="text" 
                 placeholder="e.g. alexander@example.com" 
                 value={emailOrPhone} 
                 onChange={(e) => setEmailOrPhone(e.target.value)} 
+                required
                 className="form-input"
               />
             </div>

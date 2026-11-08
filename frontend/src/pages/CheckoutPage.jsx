@@ -1,11 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { ShieldCheck, Truck, ArrowLeft, CheckCircle } from 'lucide-react';
 import { selectCart, clearCart } from '../store/slices/cartSlice';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
-import { trackEvent, META_EVENTS, getMetaCookie } from '../services/metaPixel';
+import {
+  trackEvent,
+  META_EVENTS,
+  getMetaCookie,
+  getMetaConsentToken,
+  getMetaTrackingConsent,
+  hasMetaTrackingConsent
+} from '../services/metaPixel';
+import { getProductTrackingPrice } from '../services/metaTracking';
 
 export default function CheckoutPage() {
   const dispatch = useDispatch();
@@ -31,6 +39,10 @@ export default function CheckoutPage() {
   const [codEnabled, setCodEnabled] = useState(true);
   const [codFee, setCodFee] = useState(300);
   const [freeShippingThreshold, setFreeShippingThreshold] = useState(5000);
+  const hasTrackedInitiateCheckout = useRef(false);
+  const [trackingConsent, setTrackingConsent] = useState(() =>
+    getMetaTrackingConsent()
+  );
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -50,24 +62,75 @@ export default function CheckoutPage() {
     loadSettings();
   }, []);
 
-  // ===== Meta Pixel: InitiateCheckout =====
-  // Fires once when the checkout page first mounts with items in the cart.
-  // Guarded by a ref so re-renders (form typing, cart recalculations)
-  // don't re-fire it.
   useEffect(() => {
-    if (!cart || !Array.isArray(cart.items) || cart.items.length === 0) return;
-    trackEvent(META_EVENTS.INITIATE_CHECKOUT, {
-      value: Number(cart.subtotal) || 0,
-      currency: 'PKR',
-      content_ids: cart.items.map((it) => String(it.product?._id || '')),
-      content_type: 'product',
-      num_items: cart.items.reduce(
-        (sum, it) => sum + (Number(it.quantity) || 0),
-        0
-      )
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const syncConsent = () => setTrackingConsent(getMetaTrackingConsent());
+    window.addEventListener('meta-tracking-consent-change', syncConsent);
+    return () => {
+      window.removeEventListener('meta-tracking-consent-change', syncConsent);
+    };
   }, []);
+
+  // ===== Meta Pixel: InitiateCheckout =====
+  // Fire once when checkout has cart items, including after an async cart load.
+  useEffect(() => {
+    if (
+      hasTrackedInitiateCheckout.current ||
+      trackingConsent !== 'granted' ||
+      !cart ||
+      !Array.isArray(cart.items) ||
+      cart.items.length === 0
+    ) {
+      return;
+    }
+
+    const contents = cart.items.map((item) => {
+      const product = item.product || {};
+      const productPrice = getProductTrackingPrice(product);
+      const lensPrice = item.customization?.lensOption?.price ?? 0;
+      const quantity = item.quantity;
+
+      if (
+        !product._id ||
+        productPrice === null ||
+        typeof lensPrice !== 'number' ||
+        !Number.isFinite(lensPrice) ||
+        lensPrice < 0 ||
+        typeof quantity !== 'number' ||
+        !Number.isFinite(quantity) ||
+        quantity <= 0
+      ) {
+        return null;
+      }
+
+      return {
+        id: String(product._id),
+        quantity,
+        item_price: productPrice + lensPrice
+      };
+    });
+
+    const value = cart.subtotal;
+    if (
+      contents.some((item) => item === null) ||
+      contents.length === 0 ||
+      typeof value !== 'number' ||
+      !Number.isFinite(value) ||
+      value < 0
+    ) {
+      return;
+    }
+
+    hasTrackedInitiateCheckout.current = true;
+
+    trackEvent(META_EVENTS.INITIATE_CHECKOUT, {
+      value,
+      currency: 'PKR',
+      content_ids: contents.map((item) => item.id),
+      contents,
+      content_type: 'product',
+      num_items: contents.reduce((sum, item) => sum + item.quantity, 0)
+    });
+  }, [cart, trackingConsent]);
 
   const shippingCost = cart.subtotal >= freeShippingThreshold ? 0 : codFee;
   const grandTotal = cart.subtotal + shippingCost;
@@ -93,8 +156,9 @@ export default function CheckoutPage() {
     setSubmitting(true);
 
     try {
-      const fbp = getMetaCookie('_fbp');
-      const fbc = getMetaCookie('_fbc');
+      const metaConsentToken = hasMetaTrackingConsent()
+        ? getMetaConsentToken()
+        : '';
 
       const orderPayload = {
         customerEmail: formData.email,
@@ -131,8 +195,13 @@ export default function CheckoutPage() {
           country: formData.country
         },
         orderNotes: formData.orderNotes,
-        fbp: fbp || undefined,
-        fbc: fbc || undefined
+        ...(metaConsentToken
+          ? {
+              metaConsentToken,
+              fbp: getMetaCookie('_fbp') || undefined,
+              fbc: getMetaCookie('_fbc') || undefined
+            }
+          : {})
       };
 
       const res = await api.post('/orders', orderPayload);

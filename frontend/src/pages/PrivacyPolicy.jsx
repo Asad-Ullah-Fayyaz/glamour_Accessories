@@ -1,5 +1,6 @@
 import React from 'react';
 import PolicyLayout from '../components/common/PolicyLayout';
+import { resetMetaTrackingConsent } from '../services/metaPixel';
 
 export default function PrivacyPolicy() {
   return (
@@ -75,9 +76,23 @@ export default function PrivacyPolicy() {
 
       <h2>Cookies</h2>
       <p>
-        We use essential cookies to keep your cart, session, and login working. We do not use
-        third-party tracking cookies for advertising.
+        Essential storage supports store features such as your cart and login.
+        Meta advertising measurement is disabled until you choose to allow it.
+        If allowed, the Meta Pixel may record page and product views and the
+        browser may use Meta tracking cookies. When an order is placed with
+        advertising tracking allowed, the server may send order event details
+        and hashed contact fields, along with available browser and
+        network identifiers, to Meta for measurement. Prescription text and
+        prescription images are not sent to Meta.
       </p>
+      <button
+        type="button"
+        className="btn btn-secondary btn-sm"
+        onClick={() => resetMetaTrackingConsent()}
+        style={{ marginTop: '0.75rem' }}
+      >
+        Change advertising tracking choice
+      </button>
 
       <h2>Your Rights</h2>
       <p>You have the right to:</p>

@@ -10,10 +10,53 @@ const logger = require('../utils/logger');
 const fs = require('fs');
 const path = require('path');
 
+const normalizePakistaniPhone = (phone) => {
+  if (typeof phone !== 'string') return '';
+
+  let digits = phone.replace(/\D/g, '');
+  if (digits.startsWith('0092') && digits.length === 14) {
+    digits = digits.slice(2);
+  }
+  if (digits.startsWith('92') && digits.length === 12) {
+    digits = `0${digits.slice(2)}`;
+  }
+
+  return /^03\d{9}$/.test(digits) ? digits : '';
+};
+
 const getEffectivePrice = (product) =>
   product && product.isOnSale && typeof product.salePrice === 'number' && product.salePrice >= 0
     ? product.salePrice
     : product.price;
+
+const resolveConfiguredLensOption = (selection, lensOptions) => {
+  if (
+    !selection ||
+    typeof selection !== 'object' ||
+    Array.isArray(selection) ||
+    typeof selection.name !== 'string' ||
+    !selection.name.trim() ||
+    typeof selection.price !== 'number' ||
+    !Number.isFinite(selection.price) ||
+    selection.price < 0 ||
+    !Array.isArray(lensOptions)
+  ) {
+    return null;
+  }
+
+  const configuredOption = lensOptions.find(
+    (option) =>
+      option.name === selection.name.trim() &&
+      option.price === selection.price
+  );
+  if (!configuredOption) return null;
+
+  return {
+    name: configuredOption.name,
+    description: configuredOption.description,
+    price: configuredOption.price
+  };
+};
 
 // Helper to delete physical files
 const deleteImages = (imagePaths) => {
@@ -86,9 +129,57 @@ exports.createOrder = async (req, res, next) => {
     let calculatedSubtotal = 0;
     const orderItemSnapshots = [];
     const reservedItems = [];
+    const resolvedLensOptions = new Map();
+
+    for (let index = 0; index < items.length; index += 1) {
+      const customization = items[index].customization;
+      if (!customization || typeof customization !== 'object' || Array.isArray(customization)) {
+        continue;
+      }
+
+      const hasLensSelection = Object.prototype.hasOwnProperty.call(
+        customization,
+        'lensOption'
+      );
+      if (hasLensSelection) {
+        const lensOption = resolveConfiguredLensOption(
+          customization.lensOption,
+          store.lensOptions
+        );
+        if (!lensOption) {
+          return res.status(400).json({
+            success: false,
+            message: 'Selected lens option or price is invalid. Refresh and try again.'
+          });
+        }
+        resolvedLensOptions.set(index, lensOption);
+      }
+
+      const hasPrescriptionDetails =
+        (typeof customization.description === 'string' &&
+          customization.description.trim()) ||
+        (typeof customization.prescriptionImage === 'string' &&
+          customization.prescriptionImage.trim());
+      if (hasPrescriptionDetails && !hasLensSelection) {
+        return res.status(400).json({
+          success: false,
+          message: 'A valid lens option is required for prescription details.'
+        });
+      }
+    }
+
+    const restoreReservedStock = async () => {
+      for (const reserved of reservedItems) {
+        // eslint-disable-next-line no-await-in-loop
+        await Product.findByIdAndUpdate(reserved.productId, {
+          $inc: { stock: reserved.quantity }
+        });
+      }
+    };
 
     // Atomically reserve stock for each item, rolling back if any item fails
-    for (const item of items) {
+    for (let index = 0; index < items.length; index += 1) {
+      const item = items[index];
       const productId = item.productId || item.product;
       const qty = Number(item.quantity);
 
@@ -107,12 +198,7 @@ exports.createOrder = async (req, res, next) => {
       );
 
       if (!product) {
-        for (const reserved of reservedItems) {
-          // eslint-disable-next-line no-await-in-loop
-          await Product.findByIdAndUpdate(reserved.productId, {
-            $inc: { stock: reserved.quantity }
-          });
-        }
+        await restoreReservedStock();
 
         const checkProd = await Product.findById(productId);
         const name = checkProd ? checkProd.name : item.name || 'Requested Item';
@@ -125,6 +211,21 @@ exports.createOrder = async (req, res, next) => {
       }
 
       reservedItems.push({ productId, quantity: qty });
+
+      const lensOption = resolvedLensOptions.get(index);
+      const hasCustomizationData =
+        Boolean(lensOption) ||
+        (typeof item.customization?.description === 'string' &&
+          Boolean(item.customization.description.trim())) ||
+        (typeof item.customization?.prescriptionImage === 'string' &&
+          Boolean(item.customization.prescriptionImage.trim()));
+      if (hasCustomizationData && !product.isCustomizable) {
+        await restoreReservedStock();
+        return res.status(400).json({
+          success: false,
+          message: 'This product does not support lens customization.'
+        });
+      }
 
       const sellingPrice = getEffectivePrice(product);
 
@@ -153,30 +254,6 @@ exports.createOrder = async (req, res, next) => {
             ? item.customization.prescriptionImage.trim().slice(0, 2048)
             : '';
 
-        // Lens option snapshot (optional)
-        let lensOption;
-        const rawLens = item.customization.lensOption;
-        if (rawLens && typeof rawLens === 'object') {
-          const lensName =
-            typeof rawLens.name === 'string' ? rawLens.name.trim().slice(0, 80) : '';
-          const lensDesc =
-            typeof rawLens.description === 'string'
-              ? rawLens.description.trim().slice(0, 500)
-              : '';
-          const rawLensPrice = Number(rawLens.price);
-          const lensPriceValue =
-            Number.isFinite(rawLensPrice) && rawLensPrice >= 0 ? rawLensPrice : 0;
-
-          if (lensName) {
-            lensOption = {
-              name: lensName,
-              description: lensDesc,
-              price: lensPriceValue
-            };
-            lensPrice = lensPriceValue;
-          }
-        }
-
         if (desc || img || lensOption) {
           snapshot.customization = {
             description: desc,
@@ -184,12 +261,13 @@ exports.createOrder = async (req, res, next) => {
           };
           if (lensOption) {
             snapshot.customization.lensOption = lensOption;
+            lensPrice = lensOption.price;
           }
         }
       }
 
       // Line subtotal = (authoritative selling price + lens price) * qty
-      calculatedSubtotal += (getEffectivePrice(product) + lensPrice) * qty;
+      calculatedSubtotal += (sellingPrice + lensPrice) * qty;
 
       orderItemSnapshots.push(snapshot);
     }
@@ -229,12 +307,7 @@ exports.createOrder = async (req, res, next) => {
           : {})
       });
     } catch (createErr) {
-      for (const reserved of reservedItems) {
-        // eslint-disable-next-line no-await-in-loop
-        await Product.findByIdAndUpdate(reserved.productId, {
-          $inc: { stock: reserved.quantity }
-        });
-      }
+      await restoreReservedStock();
       throw createErr;
     }
 
@@ -243,16 +316,19 @@ exports.createOrder = async (req, res, next) => {
       await Cart.findOneAndUpdate({ user: req.user._id }, { items: [] });
     }
 
-    // Trigger Meta Conversions API (CAPI) Purchase Event asynchronously (non-blocking)
-    const { fbp, fbc } = req.body || {};
-    sendCapiPurchaseEvent({
-      order,
-      req,
-      fbp,
-      fbc
-    }).catch((capiErr) => {
-      logger.error('CAPI Purchase dispatch error:', { error: capiErr.message });
-    });
+    // The CAPI service validates this opaque token against the server-side consent record.
+    if (req.body?.metaConsentToken) {
+      const { fbp, fbc } = req.body;
+      sendCapiPurchaseEvent({
+        order,
+        req,
+        fbp,
+        fbc,
+        consentToken: req.body.metaConsentToken
+      }).catch((capiErr) => {
+        logger.error('CAPI Purchase dispatch error:', { code: capiErr.code });
+      });
+    }
 
     // Send confirmation email only when an email is actually available.
     // Non-blocking failure: order creation must not fail because of email issues.
@@ -300,14 +376,16 @@ exports.getOrderByOrderId = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Order not found' });
     }
 
-    if (
+    const isAdmin = ['admin', 'superadmin'].includes(req.user?.role);
+    const isOwner =
       order.customer &&
-      order.customer.toString() !== req.user._id.toString() &&
-      req.user.role !== 'admin'
-    ) {
+      req.user?._id &&
+      order.customer.toString() === req.user._id.toString();
+
+    if (!isAdmin && !isOwner) {
       return res.status(403).json({
         success: false,
-        message: 'Forbidden: You do not have permission to view this order'
+        message: 'Forbidden'
       });
     }
 
@@ -317,6 +395,8 @@ exports.getOrderByOrderId = async (req, res, next) => {
   }
 };
 
+exports.normalizePakistaniPhone = normalizePakistaniPhone;
+
 // @desc    Public order tracking lookup
 // @route   POST /api/orders/track
 // @access  Public
@@ -324,10 +404,17 @@ exports.trackOrderPublic = async (req, res, next) => {
   try {
     const { orderId, emailOrPhone } = req.body;
 
-    if (!orderId) {
+    if (typeof orderId !== 'string' || !orderId.trim()) {
       return res
         .status(400)
         .json({ success: false, message: 'Order Reference ID is required' });
+    }
+
+    if (typeof emailOrPhone !== 'string' || !emailOrPhone.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email or phone number is required to verify this order.'
+      });
     }
 
     const order = await Order.findOne({ orderId: orderId.trim() });
@@ -338,24 +425,19 @@ exports.trackOrderPublic = async (req, res, next) => {
       });
     }
 
-    if (emailOrPhone) {
-      const queryStr = emailOrPhone.trim().toLowerCase();
-      const orderEmail = (order.customerEmail || '').toLowerCase();
-      const emailMatches = orderEmail !== '' && orderEmail === queryStr;
+    const queryStr = emailOrPhone.trim().toLowerCase();
+    const orderEmail = (order.customerEmail || '').toLowerCase();
+    const emailMatches = orderEmail !== '' && orderEmail === queryStr;
+    const suppliedPhone = normalizePakistaniPhone(emailOrPhone);
+    const orderPhone = normalizePakistaniPhone(order.shippingAddress?.phone);
+    const phoneMatches = Boolean(suppliedPhone && orderPhone && suppliedPhone === orderPhone);
 
-      const digitsOnly = (s) => (s || '').replace(/\D/g, '');
-      const phoneMatches =
-        digitsOnly(order.shippingAddress?.phone).length >= 7 &&
-        digitsOnly(order.shippingAddress?.phone).endsWith(digitsOnly(queryStr).slice(-7)) &&
-        digitsOnly(queryStr).length >= 7;
-
-      if (!emailMatches && !phoneMatches) {
-        return res.status(400).json({
-          success: false,
-          message:
-            'Security check failed. The email or phone number provided does not match our records for this order.'
-        });
-      }
+    if (!emailMatches && !phoneMatches) {
+      return res.status(400).json({
+        success: false,
+        message:
+          'Security check failed. The email or phone number provided does not match our records for this order.'
+      });
     }
 
     res.status(200).json({
@@ -368,7 +450,21 @@ exports.trackOrderPublic = async (req, res, next) => {
         paymentMethod: order.paymentMethod,
         courierInfo: order.courierInfo,
         itemCount: order.items.length,
-        cityName: order.shippingAddress.city
+        cityName: order.shippingAddress.city,
+        items: order.items.map((item) => ({
+          product: String(item.product || item._id || ''),
+          price: item.price,
+          quantity: item.quantity,
+          ...(item.customization?.lensOption
+            ? {
+                customization: {
+                  lensOption: {
+                    price: item.customization.lensOption.price
+                  }
+                }
+              }
+            : {})
+        }))
       }
     });
   } catch (error) {

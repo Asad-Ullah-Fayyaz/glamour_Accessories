@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } f
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ScrollToTop from './components/common/ScrollToTop';
 import MetaPixelTracker from './components/common/MetaPixelTracker';
+import MetaTrackingConsent from './components/common/MetaTrackingConsent';
 
 import Navbar from './components/common/Navbar';
 import Footer from './components/common/Footer';
@@ -108,6 +109,7 @@ export default function App() {
       <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <ScrollToTop />
         <MetaPixelTracker />
+        <MetaTrackingConsent />
         <Layout>
           <Routes>
 

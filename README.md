@@ -136,6 +136,8 @@ frontend/
 
 * **Order status transitions** are validated against `ORDER.VALID_TRANSITIONS`. Cancelling an order restocks its items.
 
+* **Meta tracking** uses Pixel `2078758886091501` and stays disabled until a visitor explicitly allows advertising tracking. The backend sends Purchase events through CAPI only when that consent is included and `META_ACCESS_TOKEN` plus an explicit `META_DATASET_ID` are configured. `META_PIXEL_ID` is accepted only as a logged legacy fallback. Never put the access token in frontend environment variables or client code.
+
 ---
 
 ## Status

@@ -64,21 +64,28 @@ const calculateCartTotals = (items) => {
 };
 
 // Helper: build Meta Pixel params from a product + quantity
-const buildAddToCartParams = (product, quantity) => ({
-  value: (getEffectivePrice(product) || 0) * (Number(quantity) || 1),
-  currency: 'PKR',
-  content_ids: [String(product._id)],
-  content_name: product.name || '',
-  content_type: 'product',
-  contents: [
-    {
-      id: String(product._id),
-      quantity: Number(quantity) || 1,
-      item_price: getEffectivePrice(product) || 0
-    }
-  ],
-  num_items: Number(quantity) || 1
-});
+const buildAddToCartParams = (product, quantity, customization) => {
+  const itemPrice =
+    (getEffectivePrice(product) || 0) +
+    (Number(customization?.lensOption?.price) || 0);
+  const itemQuantity = Number(quantity) || 1;
+
+  return {
+    value: itemPrice * itemQuantity,
+    currency: 'PKR',
+    content_ids: [String(product._id)],
+    content_name: product.name || '',
+    content_type: 'product',
+    contents: [
+      {
+        id: String(product._id),
+        quantity: itemQuantity,
+        item_price: itemPrice
+      }
+    ],
+    num_items: itemQuantity
+  };
+};
 
 // Async Thunks
 export const fetchCart = createAsyncThunk(
@@ -115,7 +122,10 @@ export const addToCart = createAsyncThunk(
           dispatch(cartSlice.actions.setIsCartOpen(true));
 
           // ===== Meta Pixel: AddToCart =====
-          trackEvent(META_EVENTS.ADD_TO_CART, buildAddToCartParams(product, quantity));
+          trackEvent(
+            META_EVENTS.ADD_TO_CART,
+            buildAddToCartParams(product, quantity, finalCustomization)
+          );
 
           return res.cart;
         }
@@ -164,7 +174,10 @@ export const addToCart = createAsyncThunk(
       dispatch(cartSlice.actions.setIsCartOpen(true));
 
       // ===== Meta Pixel: AddToCart =====
-      trackEvent(META_EVENTS.ADD_TO_CART, buildAddToCartParams(product, quantity));
+      trackEvent(
+        META_EVENTS.ADD_TO_CART,
+        buildAddToCartParams(product, quantity, finalCustomization)
+      );
 
       return { items: updatedItems, itemCount, subtotal };
     }
